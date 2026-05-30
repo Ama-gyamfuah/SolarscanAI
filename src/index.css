@@ -1,0 +1,173 @@
+/* CSS Variable Declarations - Sunlit Day Light Theme */
+:root {
+  --bg: #fcfbfa;
+  --bg-gradient: radial-gradient(circle at 50% -20%, #fff4db 0%, #fcfbfa 80%); /* Warm sun ray glow at the top */
+  --surface: #ffffff;
+  --card: #ffffff;
+  
+  /* Subtle glassmorphic and neutral borders */
+  --border: rgba(0, 0, 0, 0.06);
+  --border-hi: rgba(0, 0, 0, 0.12);
+  
+  /* Solar Accent Colors - Standardized and cohesive, dark high-contrast for light theme */
+  --cyan: #d97706; /* Polished Solar Amber Gold */
+  --cyan-rgb: 217, 119, 6;
+  --blue: #b45309; /* Terracotta Orange */
+  --blue-rgb: 180, 83, 9;
+  
+  /* Matured, light-theme compatible status colors */
+  --green: #15803d; /* Clean Forest Green */
+  --green-rgb: 21, 128, 61;
+  --amber: #b45309; /* Muted Bronze Gold */
+  --amber-rgb: 180, 83, 9;
+  --red: #b91c1c; /* Crimson Red */
+  --red-rgb: 185, 28, 28;
+  --purple: #701a75; /* Deep Plum Purple */
+  --purple-rgb: 112, 26, 117;
+  --pink: #be185d; /* Deep Rose */
+  --orange: #c2410c; /* Deep Copper Orange */
+  
+  /* Clean Dark Espresso texts and warm neutral details */
+  --text: #1c1917; /* Clean charcoal dark text */
+  --text-mid: #57534e; /* Warm dark grey */
+  --text-dim: #a8a29e; /* Warm light grey */
+  
+  --font-sans: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Reset and Core Layout */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--bg);
+  background-image: var(--bg-gradient);
+  color: var(--text);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+/* Scrollbar Customisation */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-hi);
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Global Keyframe Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(var(--cyan-rgb), 0.2);
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 20px rgba(var(--cyan-rgb), 0.4);
+  }
+}
+
+@keyframes scanLine {
+  0% {
+    top: 0%;
+  }
+  50% {
+    top: 100%;
+  }
+  100% {
+    top: 0%;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Slider Customisation */
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  width: 100%;
+}
+
+input[type=range]:focus {
+  outline: none;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--border-hi);
+  border-radius: 2px;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--cyan);
+  cursor: pointer;
+  margin-top: -5px;
+  box-shadow: 0 0 8px var(--cyan);
+  transition: transform 0.1s, background-color 0.1s;
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background-color: #ffffff;
+}
+
+/* Utility Animations */
+.animate-fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.spin-slow {
+  animation: spin 8s linear infinite;
+}
