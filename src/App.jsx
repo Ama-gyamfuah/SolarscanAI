@@ -178,6 +178,7 @@ export default function App() {
           display: "flex",
           flexDirection: "column",
           gap: "24px",
+          boxSizing: "border-box"
         }}
       >
         <section className="animate-fade-up">
@@ -200,7 +201,7 @@ export default function App() {
       {isMobile && <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />}
 
       {/* Floating AI Solar Expert Chatbot */}
-      {["scan", "analytics", "evidence"].includes(activeTab) && (
+      {["scan", "drone", "analytics", "evidence"].includes(activeTab) && (
         <Chatbot apiKey={apiKey} />
       )}
     </div>

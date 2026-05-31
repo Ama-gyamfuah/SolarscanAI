@@ -239,9 +239,10 @@ export default function DroneMap() {
           width: "100%",
           boxShadow: "inset 0 0 20px rgba(0,0,0,0.8)"
         }}>
-          {/* SVG Map Grid overlay */}
           <svg
             viewBox="0 0 380 220"
+            width="100%"
+            height="auto"
             style={{
               width: "100%",
               height: "auto",
