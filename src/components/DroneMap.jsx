@@ -76,14 +76,14 @@ const DEFECT_INFO = {
 };
 
 export default function DroneMap() {
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [pathIdx, setPathIdx] = useState(0);
   const [spectrum, setSpectrum] = useState("thermal"); // 'rgb' or 'thermal'
   const [selectedArray, setSelectedArray] = useState(null);
   const [telemetryLog, setTelemetryLog] = useState([
-    "Initialization drone system...",
-    "GPS Lock secure at UENR coordinate station [7.3392° N, 2.3164° W].",
-    "Engaging altitude stabilizers. Launch successful."
+    "Drone system initialized. Telemetry link established.",
+    "GPS coordinates locked at UENR Solar Grid [7.3392° N, 2.3164° W].",
+    "Awaiting manual simulation ignition... Click 'START SCAN' to begin flight path."
   ]);
   const [gpsCoord, setGpsCoord] = useState({ lat: BASE_LAT, lng: BASE_LNG });
   const [telemetryMetrics, setTelemetryMetrics] = useState({
@@ -172,7 +172,7 @@ export default function DroneMap() {
     setSelectedArray(null);
     setTelemetryLog([
       "Drone flight coordinates reset.",
-      "Stabilizers aligned. Starting flight path scan loop."
+      "Stabilizers aligned. Simulation stopped. Click 'START SCAN' to resume."
     ]);
   };
 
@@ -208,7 +208,7 @@ export default function DroneMap() {
                 transition: "all 0.2s"
               }}
             >
-              {isPlaying ? "⏸ PAUSE SCAN" : "▶ RUN SCAN"}
+              {isPlaying ? "⏹ STOP SCAN" : "▶ START SCAN"}
             </button>
             <button
               onClick={handleReset}
@@ -236,15 +236,16 @@ export default function DroneMap() {
           border: "1px solid var(--border)",
           overflow: "hidden",
           position: "relative",
-          aspectRatio: "1.7",
+          width: "100%",
           boxShadow: "inset 0 0 20px rgba(0,0,0,0.8)"
         }}>
           {/* SVG Map Grid overlay */}
           <svg
             viewBox="0 0 380 220"
-            width="100%"
-            height="100%"
             style={{
+              width: "100%",
+              height: "auto",
+              display: "block",
               background: spectrum === "thermal" 
                 ? "radial-gradient(circle at center, #0a031e 0%, #03010b 100%)" 
                 : "radial-gradient(circle at center, #0f172a 0%, #020617 100%)",
@@ -548,7 +549,7 @@ export default function DroneMap() {
                   fontFamily: "var(--font-mono)"
                 }}
               >
-                ▶ RESUME AUTO-FLIGHT
+                ▶ START AUTO-FLIGHT
               </button>
             )}
           </div>
