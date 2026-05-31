@@ -473,7 +473,7 @@ function ROICalc({ result }) {
         <span style={{ display: "inline-flex", alignItems: "center" }}><ROIIcon size={18} color="var(--amber)" /></span> Financial Impact & ROI Calculator
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+      <div className="roi-grid-2col" style={{ marginBottom: "16px" }}>
         {[
           ["Fleet Size", panels, setPanels, 10, 2000, 10, "panels"],
           ["Panel Yield (kWp)", kwp, setKwp, 0.2, 1.5, 0.05, "kWp"],
@@ -499,7 +499,7 @@ function ROICalc({ result }) {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+      <div className="roi-grid-2col">
         {[
           ["Est. Fleet Annual Revenue", `$${Math.round(annual_rev).toLocaleString()}`, "var(--text-mid)"],
           ["Annual Revenue Loss Risk", `$${Math.round(rev_at_risk).toLocaleString()}/yr`, "var(--red)"],
@@ -1889,7 +1889,7 @@ export default function ScanLab({ onSaveScan, apiKey, setApiKey }) {
               )}
 
               {/* Statistics Grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+              <div className="stats-grid">
                 {[
                   [<TrendDownIcon size={20} color="var(--red)" />, "EFF. YIELD LOSS", `${result.efficiency_loss}%`, "var(--red)"],
                   [<ScanIcon size={20} color="var(--cyan)" />, "FAULT ANOMALIES", result.detections.filter(d => d.type !== "healthy").length, "var(--cyan)"]

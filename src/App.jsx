@@ -83,7 +83,7 @@ export default function App() {
       style={{
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
-        minHeight: "100vh",
+        minHeight: "100dvh",
         background: "var(--bg)",
         color: "var(--text)",
         fontFamily: "var(--font-sans)",
@@ -92,13 +92,12 @@ export default function App() {
       {/* Viewport specific navigation elements */}
       {isMobile ? (
         <>
-          {/* Mobile Top Header Banner */}
           <header
             style={{
               background: "rgba(255, 255, 255, 0.9)",
               backdropFilter: "blur(12px)",
               borderBottom: "1px solid var(--border)",
-              padding: "12px 16px",
+              padding: "calc(12px + env(safe-area-inset-top, 0px)) 16px 12px 16px",
               position: "sticky",
               top: 0,
               zIndex: 99,

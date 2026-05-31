@@ -180,7 +180,7 @@ export default function DroneMap() {
   const inspectorDefect = DEFECT_INFO[inspectorTarget?.defect || "healthy"];
 
   return (
-    <div className="animate-fade-in" style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "20px" }}>
+    <div className="animate-fade-in drone-grid-container">
       {/* 1. Main Telemetry GIS Grid View */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         

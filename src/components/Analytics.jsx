@@ -105,7 +105,7 @@ export default function Analytics({ history }) {
       </div>
 
       {/* Aggregate Stats Cards Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px" }}>
+      <div className="responsive-grid-2">
         {[
           [<ScanIcon size={20} color="var(--cyan)" />, "Scans Completed", totalScans, "var(--cyan)"],
           [<ShieldAlertIcon size={20} color={criticalDefects > 0 ? "var(--red)" : "var(--green)"} />, "Critical Anomalies", criticalDefects, criticalDefects > 0 ? "var(--red)" : "var(--green)"],

@@ -107,7 +107,7 @@ function DatasetSection() {
   return (
     <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       {/* Top summary stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+      <div className="dataset-grid">
         {[
           ["Total Images", MODEL_SUMMARY.dataset_total, "var(--cyan)"],
           ["Training Split", `${MODEL_SUMMARY.train} (72%)`, "var(--green)"],
@@ -239,7 +239,7 @@ function ModelPerformanceSection() {
   return (
     <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       {/* Overview performance grids */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px" }}>
+      <div className="responsive-grid-2">
         {[
           ["mAP@50 (Overall)", `${(MODEL_SUMMARY.mAP50 * 100).toFixed(1)}%`, "var(--green)", "Mean average precision"],
           ["mAP@50:95 (Overall)", `${(MODEL_SUMMARY.mAP5095 * 100).toFixed(1)}%`, "var(--cyan)", "COCO strict scale"],
