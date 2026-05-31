@@ -185,7 +185,7 @@ export default function DroneMap() {
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         
         {/* Header telemetry status */}
-        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "14px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div className="drone-header-card">
           <div>
             <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--cyan)", margin: 0 }}>Drone Autonomous Inspection GIS</h2>
             <p style={{ fontSize: "11px", color: "var(--text-mid)", margin: 0 }}>On-field real-time flight path scan simulator (UENR Field, Sunyani)</p>
@@ -444,9 +444,9 @@ export default function DroneMap() {
               ["Rotor Speed", `${telemetryMetrics.rotors} RPM`, "var(--text)"],
               ["Temperature Probe", `${telemetryMetrics.temp}°C`, inspectorTarget?.defect !== "healthy" ? "var(--red)" : "var(--green)"]
             ].map(([l, v, c]) => (
-              <div key={l} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border)", paddingBottom: "6px" }}>
-                <span style={{ color: "var(--text-mid)" }}>{l}:</span>
-                <span style={{ fontWeight: 700, color: c, fontFamily: "var(--font-mono)" }}>{v}</span>
+              <div key={l} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border)", paddingBottom: "6px", gap: "8px", flexWrap: "wrap" }}>
+                <span style={{ color: "var(--text-mid)", whiteSpace: "nowrap" }}>{l}:</span>
+                <span style={{ fontWeight: 700, color: c, fontFamily: "var(--font-mono)", fontSize: l === "GPS Coordinates" ? "10px" : "11px", textAlign: "right", wordBreak: "break-all" }}>{v}</span>
               </div>
             ))}
           </div>
