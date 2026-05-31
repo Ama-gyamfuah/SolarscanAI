@@ -258,6 +258,92 @@ export default function Chatbot({ apiKey }) {
 
   const messagesEndRef = useRef(null);
 
+  // Repositioning Drag hooks
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ mouseX: 0, mouseY: 0, offsetX: 0, offsetY: 0 });
+  const hasMovedRef = useRef(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth <= 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handlePointerMove = (e) => {
+      if (!isDraggingRef.current) return;
+      
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      const diffX = clientX - dragStartRef.current.mouseX;
+      const diffY = clientY - dragStartRef.current.mouseY;
+      
+      if (Math.abs(diffX) > 5 || Math.abs(diffY) > 5) {
+        hasMovedRef.current = true;
+      }
+      
+      const newOffsetX = dragStartRef.current.offsetX - diffX;
+      const newOffsetY = dragStartRef.current.offsetY - diffY;
+      
+      // Boundaries
+      const buttonSize = 56;
+      const margin = 24;
+      const maxOffsetX = window.innerWidth - buttonSize - margin;
+      const minOffsetX = -margin;
+      const maxOffsetY = window.innerHeight - buttonSize - margin;
+      const minOffsetY = -margin;
+      
+      const constrainedX = Math.max(minOffsetX, Math.min(maxOffsetX, newOffsetX));
+      const constrainedY = Math.max(minOffsetY, Math.min(maxOffsetY, newOffsetY));
+      
+      setPosition({ x: constrainedX, y: constrainedY });
+    };
+    
+    const handlePointerUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+      }
+    };
+    
+    window.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("mouseup", handlePointerUp);
+    window.addEventListener("touchmove", handlePointerMove, { passive: false });
+    window.addEventListener("touchend", handlePointerUp);
+    
+    return () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+      window.removeEventListener("touchmove", handlePointerMove);
+      window.removeEventListener("touchend", handlePointerUp);
+    };
+  }, []);
+
+  const handlePointerDown = (e) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    dragStartRef.current = {
+      mouseX: clientX,
+      mouseY: clientY,
+      offsetX: position.x,
+      offsetY: position.y
+    };
+  };
+
+  const handleTriggerClick = (e) => {
+    e.preventDefault();
+    if (!hasMovedRef.current) {
+      setIsOpen(true);
+    }
+  };
+
   // Auto scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -353,11 +439,27 @@ export default function Chatbot({ apiKey }) {
   };
 
   return (
-    <div style={{ position: "fixed", bottom: "24px", right: "24px", zIndex: 9999, fontFamily: "var(--font-sans)" }}>
+    <div
+      style={{
+        position: "fixed",
+        bottom: isOpen 
+          ? (isMobile ? "calc(64px + env(safe-area-inset-bottom, 0px) + 12px)" : "24px") 
+          : `${24 + position.y}px`,
+        right: isOpen 
+          ? (isMobile ? "16px" : "24px") 
+          : `${24 + position.x}px`,
+        left: (isOpen && isMobile) ? "16px" : "auto",
+        zIndex: 9999,
+        fontFamily: "var(--font-sans)",
+        userSelect: isDraggingRef.current ? "none" : "auto"
+      }}
+    >
       {/* 1. Floating Trigger Button */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          onMouseDown={handlePointerDown}
+          onTouchStart={handlePointerDown}
+          onClick={handleTriggerClick}
           style={{
             width: "56px",
             height: "56px",
@@ -365,15 +467,16 @@ export default function Chatbot({ apiKey }) {
             background: "linear-gradient(135deg, var(--cyan), var(--blue))",
             color: "#000000",
             border: "none",
-            cursor: "pointer",
+            cursor: isDraggingRef.current ? "grabbing" : "grab",
             boxShadow: "0 4px 20px rgba(0, 229, 255, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.3)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-            animation: "pulse 2s infinite",
+            transition: isDraggingRef.current ? "none" : "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+            animation: isDraggingRef.current ? "none" : "pulse 2s infinite",
+            touchAction: "none"
           }}
-          title="Open Solar Chatbot"
+          title="Drag to move / Click to chat"
         >
           <ChatIcon size={24} color="#000000" />
         </button>
@@ -383,8 +486,9 @@ export default function Chatbot({ apiKey }) {
       {isOpen && (
         <div
           style={{
-            width: "380px",
-            height: "520px",
+            width: isMobile ? "auto" : "380px",
+            height: isMobile ? "calc(100dvh - 160px)" : "520px",
+            maxHeight: "520px",
             background: "var(--card)",
             backdropFilter: "blur(16px)",
             border: "1px solid var(--border)",
