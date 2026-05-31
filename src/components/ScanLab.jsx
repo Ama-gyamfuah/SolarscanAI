@@ -1255,7 +1255,40 @@ export default function ScanLab({ onSaveScan, apiKey, setApiKey }) {
     try {
       let r;
       if (engine === "yolo") {
-        r = await runSimulatedYOLO(image, simulatedDefect);
+        try {
+          const formData = new FormData();
+          formData.append("file", image);
+          
+          const response = await fetch("http://localhost:8000/api/scan", {
+            method: "POST",
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+          }
+          
+          const data = await response.json();
+          r = {
+            model: data.model,
+            method: data.method,
+            health_score: data.health_score,
+            efficiency_loss: data.efficiency_loss,
+            isPossiblyNotSolar: data.isPossiblyNotSolar,
+            timestamp: Date.now(),
+            detections: data.detections.map(d => ({
+              id: d.id,
+              type: d.type,
+              confidence: d.conf,
+              area_pct: Math.round((d.bbox.w * d.bbox.h) / 100),
+              bbox: d.bbox
+            }))
+          };
+          console.log("Custom YOLOv8 API Response:", r);
+        } catch (serverErr) {
+          console.warn("FastAPI backend not reachable, falling back to simulated YOLO:", serverErr);
+          r = await runSimulatedYOLO(image, simulatedDefect);
+        }
       } else {
         r = await analyseWithVisionAPI(image, apiKey, simulatedDefect);
       }
