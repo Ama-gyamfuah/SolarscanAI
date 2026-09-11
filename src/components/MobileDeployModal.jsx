@@ -295,6 +295,49 @@ export default function MobileDeployModal({ isOpen, onClose }) {
                   />
                 </div>
 
+                <div>
+                  <label style={{ display: "block", fontSize: "10.5px", fontWeight: 800, color: "var(--cyan)", textTransform: "uppercase", marginBottom: "4px" }}>
+                    🌐 Supervisor Review Link (Global Internet):
+                  </label>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <input
+                      type="text"
+                      id="input-supervisor-url"
+                      readOnly
+                      value="https://solarscan-ai.vercel.app"
+                      style={{
+                        flex: 1,
+                        padding: "8px 12px",
+                        background: "var(--card)",
+                        border: "1px solid var(--cyan)",
+                        borderRadius: "6px",
+                        color: "var(--cyan)",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "12px",
+                        fontWeight: 700
+                      }}
+                    />
+                    <a
+                      href="https://solarscan-ai.vercel.app"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        padding: "8px 14px",
+                        background: "var(--cyan)",
+                        color: "#fff",
+                        textDecoration: "none",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center"
+                      }}
+                    >
+                      Open ↗
+                    </a>
+                  </div>
+                </div>
+
                 <div style={{ fontSize: "11px", color: "var(--text-dim)" }}>
                   💡 <em>Connect both devices to the same Wi-Fi, or turn on your phone mobile hotspot and connect your laptop to it. Zero internet required!</em>
                 </div>
