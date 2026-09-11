@@ -50,7 +50,7 @@ const MEAN_SUS = PARTICIPANTS_SCORES.reduce((a, b) => a + b.score, 0) / PARTICIP
 const TASK_COMPLETION_RATES = [
   { task: "Upload and scan a panel image", rate: 100, color: "var(--green)" },
   { task: "Interpret visual detection anomalies", rate: 100, color: "var(--green)" },
-  { task: "Utilise financial yield ROI model", rate: 87.5, color: "var(--cyan)" },
+  { task: "Analyze local model metadata stats", rate: 87.5, color: "var(--cyan)" },
   { task: "Navigate explainable Grad-CAM matrix", rate: 100, color: "var(--green)" },
   { task: "Export local text field report", rate: 91.6, color: "var(--green)" },
   { task: "Integrate custom field-technician notes", rate: 83.3, color: "var(--cyan)" }

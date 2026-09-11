@@ -177,6 +177,12 @@ export const SunIcon = ({ color = "currentColor", size = 20 }) => (
   </svg>
 );
 
+export const MoonIcon = ({ color = "currentColor", size = 20 }) => (
+  <svg viewBox="0 0 24 24" style={iconStyle(color, size)}>
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+  </svg>
+);
+
 export const DatabaseIcon = ({ color, size = 18 }) => (
   <svg viewBox="0 0 24 24" style={iconStyle(color, size)}>
     <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -287,3 +293,52 @@ export const InfoIcon = ({ color, size = 18 }) => (
     <line x1="12" y1="8" x2="12.01" y2="8" />
   </svg>
 );
+
+export const SolarScanLogo = ({ size = 26 }) => (
+  <svg
+    viewBox="0 0 36 36"
+    width={size}
+    height={size}
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+  >
+    <defs>
+      <linearGradient id="ss-logo-grad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#0ea5e9" />
+        <stop offset="50%" stopColor="#0284c7" />
+        <stop offset="100%" stopColor="#f59e0b" />
+      </linearGradient>
+      <linearGradient id="ss-cell-grad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.9" />
+        <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.9" />
+      </linearGradient>
+    </defs>
+    {/* Outer Precision Shield Aperture */}
+    <rect x="2" y="2" width="32" height="32" rx="9" stroke="url(#ss-logo-grad)" strokeWidth="2.2" fill="none" />
+    
+    {/* 4-Cell Photovoltaic Wafer Array */}
+    <rect x="6.5" y="6.5" width="10" height="10" rx="2" fill="url(#ss-cell-grad)" />
+    <rect x="19.5" y="6.5" width="10" height="10" rx="2" fill="url(#ss-cell-grad)" />
+    <rect x="6.5" y="19.5" width="10" height="10" rx="2" fill="url(#ss-cell-grad)" />
+    <rect x="19.5" y="19.5" width="10" height="10" rx="2" fill="url(#ss-cell-grad)" />
+    
+    {/* Wafer Busbars / Conductor Grid Lines */}
+    <line x1="11.5" y1="6.5" x2="11.5" y2="16.5" stroke="#ffffff" strokeWidth="0.8" strokeLinecap="round" opacity="0.85" />
+    <line x1="24.5" y1="6.5" x2="24.5" y2="16.5" stroke="#ffffff" strokeWidth="0.8" strokeLinecap="round" opacity="0.85" />
+    <line x1="11.5" y1="19.5" x2="11.5" y2="29.5" stroke="#ffffff" strokeWidth="0.8" strokeLinecap="round" opacity="0.85" />
+    <line x1="24.5" y1="19.5" x2="24.5" y2="29.5" stroke="#ffffff" strokeWidth="0.8" strokeLinecap="round" opacity="0.85" />
+    
+    {/* Central Precision Target Aperture Crosshair */}
+    <circle cx="18" cy="18" r="3.2" fill="#0f172a" stroke="#ffffff" strokeWidth="1" />
+    <circle cx="18" cy="18" r="1.4" fill="#38bdf8" />
+  </svg>
+);
+
+export const ShieldCheckIcon = ({ color = "currentColor", size = 18 }) => (
+  <svg viewBox="0 0 24 24" style={iconStyle(color, size)}>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <polyline points="9 12 11 14 15 10" />
+  </svg>
+);
+

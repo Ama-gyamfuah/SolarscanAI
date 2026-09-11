@@ -4,7 +4,7 @@ import { GraduationCapIcon, BookOpenIcon } from "./Icons";
 const CHECKLIST_ITEMS = [
   { item: "Fully trained YOLOv8n detector model", detail: "YOLOv8n-PV, 92.7% mAP@50 validated", ok: true },
   { item: "Diverse dataset with ground-truth citations", ok: true, detail: "n=4,312 images across Roboflow, Kaggle, PVEL-AD" },
-  { item: "Functional UI execution pipeline", ok: true, detail: "Scanning, History, ROI calculator, and Text exporter" },
+  { item: "Functional UI execution pipeline", ok: true, detail: "Scanning, History, and Text exporter" },
   { item: "Human-Computer Interaction (HCI) standards", ok: true, detail: "Norman's feedback, Fitts' law triggers, WCAG 2.2 color contrast ratios" },
   { item: "Usability testing validation (SUS scores)", ok: true, detail: "n=12, Mean SUS score 84.3 (Excellent / B+ rating)" },
   { item: "System Architecture block diagrams", ok: true, detail: "Presentation, Inference, Persistence layers mapped" },
@@ -13,7 +13,6 @@ const CHECKLIST_ITEMS = [
   { item: "Comparative Benchmarks tables", ok: true, detail: "Benchmarked vs YOLOv5s, YOLOv11n SOTA, YOLOv8 baseline" },
   { item: "Training Loss and Precision Curves graphs", ok: true, detail: "Interactive SVG curves over 120 training epochs" },
   { item: "TFLite model quantitative output", ok: true, detail: "Post-training INT8 quantisation (3.2 MB, 168ms inference)" },
-  { item: "Fleet Financial Risk Yield Model", ok: true, detail: "Interactive ROI calculator with parameters sliders" },
   { item: "Explainable Artificial Intelligence (XAI) mapping", ok: true, detail: "Grad-CAM attention grids rendered for model activations" }
 ];
 

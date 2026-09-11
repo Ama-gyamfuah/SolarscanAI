@@ -16,7 +16,7 @@ const FIELD_ARRAYS = [
 
   { id: "B1", x: 40, y: 80, defect: "healthy", name: "Array Beta 1" },
   { id: "B2", x: 95, y: 80, defect: "crack", name: "Array Beta 2", note: "EL scan identifies multiple cell micro-cracks from wind strain." },
-  { id: "B3", x: 150, y: 80, defect: "healthy", name: "Array Beta 2" },
+  { id: "B3", x: 150, y: 80, defect: "healthy", name: "Array Beta 3" },
   { id: "B4", x: 205, y: 80, defect: "healthy", name: "Array Beta 4" },
   { id: "B5", x: 260, y: 80, defect: "pid", name: "Array Beta 5", temp: 42.1, delta: 12.5, note: "Potential Induced Degradation. High electrical leakage to frame." },
   { id: "B6", x: 315, y: 80, defect: "healthy", name: "Array Beta 6" },
@@ -196,16 +196,17 @@ export default function DroneMap() {
             <button
               onClick={() => setIsPlaying(!isPlaying)}
               style={{
-                background: isPlaying ? "rgba(217, 119, 6, 0.08)" : "linear-gradient(135deg, var(--cyan), var(--blue))",
+                background: isPlaying ? "rgba(15, 23, 42, 0.08)" : "var(--hardware)",
                 border: isPlaying ? "1px solid var(--border)" : "none",
-                color: isPlaying ? "var(--cyan)" : "#000",
-                padding: "6px 12px",
-                borderRadius: "6px",
+                color: isPlaying ? "var(--text)" : "#ffffff",
+                padding: "8px 16px",
+                borderRadius: "8px",
                 fontFamily: "var(--font-mono)",
                 fontSize: "11px",
                 fontWeight: 700,
                 cursor: "pointer",
-                transition: "all 0.2s"
+                transition: "all 0.2s",
+                boxShadow: isPlaying ? "none" : "0 4px 14px rgba(15, 23, 42, 0.25)"
               }}
             >
               {isPlaying ? "⏹ STOP SCAN" : "▶ START SCAN"}

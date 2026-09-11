@@ -53,6 +53,41 @@ const TrashIcon = ({ size = 16, color = "currentColor" }) => (
   </svg>
 );
 
+// Key / Settings Icon
+const SettingsIcon = ({ size = 16, color = "currentColor" }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke={color}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
+// Globe Icon for Internet
+const GlobeIcon = ({ size = 14, color = "currentColor" }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke={color}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+
 // Send Icon (SVG)
 const SendIcon = ({ size = 16, color = "currentColor" }) => (
   <svg
@@ -70,187 +105,288 @@ const SendIcon = ({ size = 16, color = "currentColor" }) => (
   </svg>
 );
 
-// Expanded local offline database covering solar panels, energy, batteries, and everything solar
-const SOLAR_KNOWLEDGE = [
+// ─────────────────────────────────────────────────────────────
+// 1. LIVE INTERNET WEB RETRIEVAL ENGINE (Real Web via Wikipedia API)
+// ─────────────────────────────────────────────────────────────
+function cleanSearchQuery(q) {
+  return q
+    .replace(/^(what is|what are|how to|how do i|can i|explain|tell me about|how does|why is|why does|is it possible to)\s+/i, "")
+    .replace(/[?!.]+$/, "")
+    .trim();
+}
+
+async function searchLiveInternet(queryText) {
+  try {
+    const cleaned = cleanSearchQuery(queryText);
+    const searchTarget = cleaned.length >= 3 ? cleaned : queryText;
+
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTarget)}&utf8=&format=json&origin=*`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) return null;
+    const searchData = await searchRes.json();
+    const hits = searchData.query?.search || [];
+    if (hits.length === 0) return null;
+
+    const topHits = hits.slice(0, 2);
+    const titles = topHits.map(h => h.title).join("|");
+
+    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=true&explaintext=true&titles=${encodeURIComponent(titles)}&format=json&origin=*`;
+    const extractRes = await fetch(extractUrl);
+    if (!extractRes.ok) return null;
+    const extractData = await extractRes.json();
+    const pages = Object.values(extractData.query?.pages || {});
+
+    const validArticles = pages
+      .map(p => ({
+        title: p.title,
+        text: (p.extract || "").trim(),
+        url: `https://en.wikipedia.org/wiki/${encodeURIComponent(p.title.replace(/\s+/g, "_"))}`
+      }))
+      .filter(a => a.text.length > 40);
+
+    if (validArticles.length === 0) return null;
+
+    return {
+      source: "Live Web & Technical Encyclopedia",
+      articles: validArticles
+    };
+  } catch (err) {
+    console.warn("Live internet web retrieval failed:", err);
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 2. GOOGLE GEMINI GENERATIVE AI MULTI-MODEL CLIENT
+// ─────────────────────────────────────────────────────────────
+async function queryGeminiWithFallbacks(prompt, apiKey) {
+  const models = [
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-pro"
+  ];
+
+  let lastError = null;
+
+  for (const model of models) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text: `You are SolarScan AI Assistant, an expert solar photovoltaic systems engineer and field diagnostic specialist.
+Answer the user's technical questions thoroughly, helpfully, and practically.
+Focus on: solar panels, inverters, batteries, electrical wiring, defect diagnostics, troubleshooting error codes, sizing, safety, and clean energy technology.
+Use clean markdown with bullet points and bold key terms. Keep explanations clear and actionable.
+
+User Question: "${prompt}"`
+                  }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 800
+            }
+          })
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          return { text, model };
+        }
+      } else {
+        const errJson = await response.json().catch(() => ({}));
+        const status = response.status;
+        const msg = errJson?.error?.message || `Status ${status}`;
+        lastError = { status, message: msg };
+        if (status === 403 || msg.toLowerCase().includes("permission_denied") || msg.toLowerCase().includes("has not been used")) {
+          break;
+        }
+      }
+    } catch (netErr) {
+      lastError = { status: 0, message: netErr.message };
+    }
+  }
+
+  throw lastError || new Error("All Gemini models failed");
+}
+
+// ─────────────────────────────────────────────────────────────
+// 3. EXPANDED SOLAR DIAGNOSTIC & TROUBLESHOOTING KNOWLEDGE BASE
+// ─────────────────────────────────────────────────────────────
+const SOLAR_EXPERT_KB = [
   {
-    keys: ["hi", "hello", "hey", "greet", "who are you"],
-    response: "Hello! I am your SolarScan AI Technical Assistant. I can help you answer any questions about solar panels, photovoltaic technology, battery storage, inverters, system sizing, ROI calculations, and defect detection. What would you like to know?"
+    keys: ["error", "fault", "code", "inverter error", "iso", "isolation", "riso", "ground fault"],
+    topic: "Inverter Faults & Ground Isolation (Riso Low)",
+    response: `### Inverter Fault & Ground Isolation Troubleshooting
+
+**Common Causes & Remediation:**
+1. **Isolation Fault / Ground Fault (Riso Low):**
+   - **Cause:** Moisture entry into DC connectors (MC4), damaged cable insulation touching metal roof/racking, or cracked panel glass.
+   - **Fix:** Measure DC resistance to ground on both (+) and (-) strings with a digital megohmmeter (insulation tester). If below 1 MΩ, isolate strings one by one to pinpoint the damaged cable or panel.
+2. **Grid Overvoltage / High AC Voltage (Vac High):**
+   - **Cause:** Local utility grid impedance too high during peak noon solar export.
+   - **Fix:** Verify AC wire gauge sizing from inverter to main panel to reduce voltage drop. Consult utility to tap change the distribution transformer.
+3. **PV Overvoltage (Vpv High):**
+   - **Cause:** Too many panels wired in series, exceeding inverter Maximum DC Input Voltage in cold weather.
+   - **Fix:** Calculate Voc with temperature coefficient. Split string into parallel branches.`
   },
   {
-    keys: ["hotspot", "hot spot", "overheat", "burning", "burn"],
-    response: "Thermal hotspots occur when solar cells are shaded, cracked, or electrically mismatched, acting as resistive loads that dissipate power as high heat. Urgency: CRITICAL. Recommendation: Shutdown and IR-inspect the string. If the temperature delta (ΔT) exceeds 25°C relative to surrounding areas, inspect the bypass diodes in the junction box or schedule panel replacement."
+    keys: ["mc4", "connector", "burn", "melt", "crimp", "spark", "arc"],
+    topic: "MC4 Connectors & DC Arcing Prevention",
+    response: `### MC4 Connector Issues & DC Fire Prevention
+
+**Critical Safety Points:**
+• **Cross-Mating Hazard:** Never mate MC4 connectors from different manufacturers (e.g. Staubli with generic clones). Subtle dimensional differences cause high contact resistance, leading to thermal runaway and melted connectors.
+• **Crimping:** Always use a calibrated hex/ratchet MC4 crimping tool, never pliers. Loose crimps generate micro-arcs under 10–15 Amperes DC.
+• **Waterproofing:** Ensure cable gland collars are tightened to 2.5–3.0 N·m. Orient connectors horizontally or looping downwards so rainwater drips off rather than entering the seal.
+• **Disconnect Under Load:** NEVER disconnect MC4 plugs while current is flowing — DC does not cross zero like AC and will draw a dangerous 600V–1000V electric arc.`
   },
   {
-    keys: ["crack", "microcrack", "broken", "shatter", "glass"],
-    response: "Solar cell micro-cracks are internal fractures in silicon wafers caused by mechanical strain, wind/hail loading, or improper handling. While invisible to the naked eye, they show up clearly under EL (Electroluminescence) scans. Recommendation: Monitor quarterly. If micro-cracks isolate wafer sections causing cell power output to drop by more than 10%, plan module replacement."
+    keys: ["multimeter", "measure", "test", "voc", "isc", "open circuit", "short circuit", "voltage check"],
+    topic: "Testing Solar Panels with a Multimeter",
+    response: `### Step-by-Step Solar Panel Multimeter Testing
+
+1. **Open-Circuit Voltage (Voc) Test:**
+   - Set multimeter to DC Volts (range 0–100V or 0–600V DC).
+   - Place red probe on positive MC4, black probe on negative MC4 in full sunlight.
+   - **Healthy Value:** Should match rated nameplate Voc ±5% (typically 36V–50V per residential panel).
+   - **Fault:** If reading 2/3 of rated Voc, one of the 3 bypass diodes in the junction box is shorted.
+2. **Short-Circuit Current (Isc) Test:**
+   - Set multimeter to DC 10A/20A mode.
+   - Briefly touch probes across (+) and (-) leads in direct sunlight.
+   - **Healthy Value:** Should read close to rated Isc (typically 9A–14A depending on module wattage).`
   },
   {
-    keys: ["soiling", "dust", "sand", "dirt", "dirty", "clean", "wash"],
-    response: "Soiling involves the accumulation of atmospheric dust, sand, or bird droppings on the panel glass, blocking incoming solar irradiance. It is the leading cause of reversible yield loss. Recommendation: Implement a monthly maintenance wash using deionised water and soft squeegees. Avoid abrasive scrubbers to prevent stripping the anti-reflective glass coating."
+    keys: ["battery", "lifepo4", "lfp", "lithium", "agm", "gel", "charge voltage", "bms", "cut off"],
+    topic: "Battery Storage & Charging Protocols",
+    response: `### Solar Battery Chemistry & Optimal Charging Profiles
+
+• **Lithium Iron Phosphate (LiFePO4 / LFP):**
+  - **Bulk / Absorption Voltage:** 14.4V–14.6V (12V) or 57.6V–58.4V (48V system).
+  - **Float Voltage:** 13.6V–13.8V (54.4V for 48V).
+  - **Max Recommended Depth of Discharge (DoD):** 80%–90%.
+  - **Cycle Life:** 4,000–6,000 cycles.
+  - **BMS Protection:** Shuts down charging below 0°C to prevent lithium plating and fire hazard.
+• **Lead-Acid / AGM / Gel:**
+  - **Bulk:** 14.4V–14.7V. **Float:** 13.5V–13.8V. **Equalization:** 15.0V (flooded only).
+  - **Max DoD:** 50% max to prevent premature sulfation.
+  - **Cycle Life:** 500–1,200 cycles.`
   },
   {
-    keys: ["delamination", "peeling", "water", "moisture"],
-    response: "Delamination is the peeling apart of the panel encapsulation layers (tempered glass, EVA, solar cells, and backsheet) due to moisture entry. This leads to circuit corrosion and leakage currents. Recommendation: Apply silicone UV sealants if localized peeling covers less than 5% of the surface area. Replace the panel if delamination exceeds 20%."
+    keys: ["size", "sizing", "calculator", "how many", "calculate", "pump", "ac", "air condition", "fridge"],
+    topic: "Solar Sizing & Load Calculations",
+    response: `### Practical System Sizing Equation
+
+**Formula:**
+Required Solar kW = (Daily Load in kWh / Peak Sun Hours) × 1.25 (system losses)
+
+**Examples:**
+• **1.5 HP Air Conditioner (1,200 Watts) running 6 hrs/day:**
+  - Daily energy: 1.2 kW × 6 hrs = 7.2 kWh/day.
+  - In Sunyani / Ghana (avg 5.0 Peak Sun Hours):
+    (7.2 / 5.0) × 1.25 = 1.8 kW of solar panels ≈ 5 × 400W modules.
+• **1 HP Submersible Water Pump (750 Watts):**
+  - Surge factor: Requires an inverter rated for 3× startup surge (min 2.5 kW / 3 kVA).
+  - Panels: Min 4 × 400W panels with an MPPT charge controller or solar VFD pump inverter.`
   },
   {
-    keys: ["pid", "voltage", "potential", "degradation"],
-    response: "Potential Induced Degradation (PID) is caused by leakage currents between active cells and the grounded metal frame, draining system power. Recommendation: Verify system grounding. Use an overnight reverse-PID voltage injection treatment (charging the string positive to ground) to reverse the polarization damage."
+    keys: ["hotspot", "hot spot", "overheat", "thermal", "ir camera"],
+    topic: "Hotspot Detection & Thermodynamics",
+    response: `### Thermal Hotspots in Photovoltaic Cells
+
+• **Root Cause:** A shaded, cracked, or internally mismatched cell produces less photocurrent than other cells in the string. Because all cells are wired in series, the string forces current through the damaged cell, turning it into a reverse-biased resistive heater.
+• **Diagnostic Threshold:** Under infrared thermography (or SolarScan AI thermal mode):
+  - **ΔT < 10°C:** Normal operating variance.
+  - **ΔT 10°C–20°C:** Moderate hotspot; monitor bypass diode function.
+  - **ΔT > 25°C:** Critical fault; risk of EVA encapsulant browning, backsheet burn-through, and permanent wafer delamination. Module replacement required.`
   },
   {
-    keys: ["inverter", "string inverter", "microinverter", "micro-inverter", "hybrid inverter"],
-    response: "Solar inverters convert DC power generated by solar panels into AC power used by home appliances or fed into the utility grid. Common types are String Inverters (centralized, cost-effective), Microinverters (installed per-panel, optimizes shaded fleets), and Hybrid Inverters (combines solar conversion and battery storage interfaces)."
+    keys: ["crack", "microcrack", "micro-crack", "el", "electroluminescence", "fracture"],
+    topic: "Cell Micro-cracks & Structural Integrity",
+    response: `### Silicon Micro-cracks & EL Diagnostics
+
+• **Origin:** High mechanical wind loads, hail impact, thermal expansion cycles, or technicians walking on panels during installation.
+• **Diagnostic:** Silicon micro-cracks are typically invisible to human eyes under standard RGB light. They require **Electroluminescence (EL) imaging** or high-resolution machine vision (as demonstrated in SolarScan AI).
+• **Impact:** Inactive cell areas reduce current flow, drop output capacity by 10%–25%, and often evolve into severe localized hotspots over 12–24 months.`
   },
   {
-    keys: ["battery", "batteries", "storage", "lithium", "lfp", "lead-acid", "backup", "kwh"],
-    response: "Solar battery storage stores excess energy generated during the day for use at night or during blackouts. Modern systems primarily use Lithium Iron Phosphate (LFP / LiFePO4) chemistry due to its long cycle life (3000-6000 cycles), high depth of discharge (90%+), and safety compared to older lead-acid batteries."
+    keys: ["soiling", "dust", "cleaning", "wash", "sand", "dirt"],
+    topic: "Soiling Yield Loss & Maintenance Protocol",
+    response: `### Soiling Degradation & Washing Standards
+
+• **Yield Loss:** Dust and sand accumulation reduce panel transmission efficiency by 5% to over 30% in arid / Harmattan conditions across West Africa.
+• **Best Practices:**
+  1. **Timing:** Clean panels strictly in early morning or late evening when glass is cool. Spraying cold water on hot panels in direct sunlight causes thermal shock glass shattering.
+  2. **Water Quality:** Use deionised / filtered water (< 100 ppm TDS). High mineral/borehole water leaves white calcium scale that permanently bakes onto glass.
+  3. **Equipment:** Soft microfiber brushes or squeegees. Never use wire brushes or high-pressure washers (> 30 bar).`
   },
   {
-    keys: ["net metering", "net-metering", "grid-tied", "sell back"],
-    response: "Net Metering is a billing mechanism that credits solar system owners for the electricity they add to the utility grid. When panels produce more energy than is consumed, the excess flows to the grid, spinning the meter backward and providing credits to offset utility bills."
-  },
-  {
-    keys: ["tilt", "angle", "orientation", "azimuth", "direction"],
-    response: "To maximize annual solar energy yield, solar panels should be tilted at an angle roughly equal to the geographical latitude of the installation site. In the Northern Hemisphere, panels should face true South (180° Azimuth); in the Southern Hemisphere, they should face true North (0° Azimuth) to receive peak solar irradiance throughout the day."
-  },
-  {
-    keys: ["monocrystalline", "polycrystalline", "thin film", "mono vs poly", "solar cell types"],
-    response: "Monocrystalline panels are made from a single pure silicon crystal, offering the highest efficiency (19% to 22%+) and a sleek black aesthetic. Polycrystalline panels are made from melted fragments of silicon, have slightly lower efficiency (15% to 18%), and a blue speckled appearance. Thin-film panels are flexible but have low efficiency (10% to 13%), used for specialized structures."
-  },
-  {
-    keys: ["efficiency", "loss", "temperature coefficient"],
-    response: "Solar panel cell efficiency determines how much sunlight is converted into usable electricity. Standard residential panels operate at 18-22% efficiency. As temperature increases above 25°C, efficiency drops slightly due to the silicon's 'temperature coefficient' (typically losing 0.3% to 0.4% power per 1°C increase)."
-  },
-  {
-    keys: ["cost", "price", "savings", "tax credit", "payback", "watts"],
-    response: "A residential solar system typically costs between $2.80 and $3.50 per watt before incentives. In many regions, tax credits (like the US Federal ITC of 30%) reduce this cost significantly. The average payback period (when the electricity savings cover the system cost) is between 6 to 10 years, followed by 15-20 years of free energy."
-  },
-  {
-    keys: ["yolo", "tflite", "model", "neural", "grad-cam"],
-    response: "This application integrates an optimized YOLOv8n (You Only Look Once v8 nano) network compiled to TensorFlow Lite INT8. The model runs locally in the client browser, detecting anomaly bounding boxes (defect class coordinates) and displaying Grad-CAM activation heatmaps in ~180 milliseconds, ensuring fully private, offline scanning."
-  },
-  {
-    keys: ["roi", "calculator", "finance", "revenue"],
-    response: "Our ROI calculator computes potential yield losses by taking your fleet inputs (Panels × Panel Yield × Peak Sun Hours × Tariff rate) and multiplying by the AI-detected Efficiency Loss percentage. It then calculates corrective repair costs ($110 per unit + $250 service fee) to estimate your net annual retained savings."
-  },
-  {
-    keys: ["project", "uenr", "fyp"],
-    response: "SolarScan AI is built as a Final Year Project (FYP) for the University of Energy and Natural Resources (UENR). It aims to offer engineers and field technicians a modern, portable, AI-powered diagnostic framework to optimize solar farm efficiencies."
-  },
-  {
-    keys: ["size", "sizing", "how many panels", "kw rating", "calculate panels", "system size"],
-    response: "To calculate your required solar system size, divide your monthly energy consumption (in kWh) by your area's average peak sun hours per month, then multiply by a system efficiency buffer (typically 1.15 to 1.20 to account for inverter and wiring losses).\n\nFor example, if a home uses 900 kWh per month in an area receiving 4.5 peak sun hours per day:\n• Daily consumption: 900 kWh / 30 days = 30 kWh/day\n• Required system power: 30 kWh / 4.5 hours = 6.67 kW DC\n• With a 1.20 loss factor: 6.67 kW × 1.20 = 8.0 kW system size.\n• Panel count: An 8.0 kW system using standard 400W monocrystalline modules requires exactly 20 panels (8,000W / 400W)."
-  },
-  {
-    keys: ["science", "how do panels work", "physics", "silicon", "photon", "semiconductor", "photovoltaic"],
-    response: "Solar panels generate electricity using the Photovoltaic (PV) Effect. When photons from sunlight strike a solar cell made of semiconductor materials (like silicon), they transfer energy to bound electrons, knocking them free and creating electron-hole pairs.\n\nKey physical steps:\n1. **P-N Junction**: Silicon wafers are doped to create a negative layer (n-type) and a positive layer (p-type), establishing an internal electric field.\n2. **Electron Flow**: Free electrons are forced by the electric field to flow toward the n-type side, while holes move to the p-type side.\n3. **Current Collection**: Metal contact grids on top of the cell collect these moving electrons, directing them into external circuits as Direct Current (DC) electricity."
-  },
-  {
-    keys: ["bifacial", "double-sided", "double sided", "albedo"],
-    response: "Bifacial solar panels feature light-absorbing cells on both the front and rear faces of the module. While the front face captures direct sunlight, the rear face captures indirect light reflected off the surrounding ground (known as 'albedo' light).\n\nAdvantages:\n• **Higher Yield**: Can generate 5% to 30% more energy than standard monofacial panels depending on ground reflectivity.\n• **Optimal Pairings**: Perfect for highly reflective surfaces like white gravel, concrete, sand, or snow. They are widely used in ground-mounted utility-scale systems and carports."
-  },
-  {
-    keys: ["off-grid", "offgrid", "grid-tied", "hybrid system", "stand alone"],
-    response: "Solar configurations fall into three main types:\n\n1. **Grid-Tied System**: Connected directly to the utility grid. Simple and economical because excess energy is sent to the grid via net metering, removing the absolute need for batteries.\n2. **Off-Grid System**: Completely isolated. Requires a massive battery storage bank to store energy for nighttime and multi-day storms, plus a backup generator to ensure continuous power.\n3. **Hybrid System**: Combines both worlds. It is grid-tied but includes a home battery. It prioritizes battery self-consumption during peak utility rate hours and provides backup power during grid blackouts."
-  },
-  {
-    keys: ["shading", "shadow", "tree", "bypass diode", "obstruction"],
-    response: "Shading even a tiny portion of a solar panel can severely degrade the output of the entire panel string, as shaded cells act as high-resistance blockages. To prevent this, manufacturers integrate **Bypass Diodes** inside the panel's junction box.\n\nHow it works:\n• **Bypass Path**: When a cell is shaded, the bypass diode activates to route the electrical current around the shaded segment, sacrificing that section to keep the rest of the string running at full capacity.\n• **Design Optimization**: For heavily shaded roofs, **Microinverters** or **Power Optimizers** are recommended, as they perform Maximum Power Point Tracking (MPPT) at the individual panel level, preventing one shaded panel from dragging down the rest."
-  },
-  {
-    keys: ["lifetime", "lifespan", "life span", "warranty", "degradation rate", "durability"],
-    response: "Standard residential solar panels are extremely durable and feature a lifespan of **25 to 30 years**. Most Tier 1 manufacturers provide a double-layered warranty:\n\n• **Product Warranty**: Covers material defects, glass breakage, and manufacturing faults, typically lasting 12 to 25 years.\n• **Performance Warranty**: Guarantees that the panel output will not degrade too quickly. A standard warranty guarantees at least 90% power output at year 10, and 80% to 85% at year 25.\n• **Degradation Rate**: Silicon panels degrade at an average rate of **0.5% per year**. After 25 years, a high-quality panel will still operate at roughly 87.5% of its initial rated capacity."
-  },
-  {
-    keys: ["carbon", "co2", "environment", "climate", "green energy", "benefit", "offset"],
-    response: "Solar energy is one of the cleanest and most sustainable power sources available, generating zero carbon dioxide, greenhouse gases, or particulate air pollution during operation.\n\nEnvironmental Impacts:\n• **Carbon Offset**: An average residential 8 kW solar system offsets approximately 150 tons of CO2 over its 25-year lifetime, equivalent to planting 3,500 trees or driving 300,000 fewer miles in a gasoline car.\n• **Energy Payback Time (EPBT)**: The time a panel takes to generate the energy required to manufacture, package, and transport it. Modern silicon solar panels reach their energy payback within **1 to 2 years** of active operation, yielding 23+ years of completely net-positive clean energy."
-  },
-  {
-    keys: ["maintenance", "clean", "safety", "danger", "fire", "shock"],
-    response: "Solar panels require minimal maintenance because they have no moving parts. However, regular upkeep and safety protocols are important:\n\n• **Inspection**: Schedule a visual scan twice a year to check for accumulated leaves, bird nesting under panels, or surface cracking.\n• **Safety & Shock Risks**: Solar strings operate at high DC voltages (up to 600V for residential, 1500V for commercial). Never touch exposed cables or try to repair junction boxes yourself. Use the app's rapid shutdown protocols or call a certified installer.\n• **Fire Safety**: Electrical arcing due to damaged connectors is the main cause of solar fires. Keep your inverter clear of clutter and monitor standard safety alerts."
-  },
-  {
-    keys: ["powerwall", "tesla", "home storage", "battery capacity"],
-    response: "Home batteries like the Tesla Powerwall store excess solar power generated during the day for use at night or during blackouts. A typical unit (e.g. Powerwall 3) features a capacity of **13.5 kWh** and an output of **11.5 kW** continuous power, equipped with a built-in hybrid solar inverter. Combining solar with smart battery storage protects homeowners from grid outages and maximizes savings in utility regions with time-of-use pricing models."
+    keys: ["pid", "potential induced degradation", "leakage", "grounding"],
+    topic: "Potential Induced Degradation (PID) Mitigation",
+    response: `### Potential Induced Degradation (PID)
+
+• **Mechanism:** In high-voltage DC strings (600V–1500V), a high potential difference between active silicon cells and the grounded metal frame drives sodium (Na+) ion migration from glass into the silicon p-n junction, causing severe shunting and string power drops up to 50%.
+• **Remediation:**
+  1. **Anti-PID Inverters / Boxes:** Apply an opposite high-voltage offset overnight (reversing the electric field to pull sodium ions back out).
+  2. **Frame Grounding:** Ensure module frame earthing impedance is < 5 Ω.
+  3. **Module Selection:** Use PID-resistant certified modules (IEC 62804 standard).`
   }
 ];
 
-// Helper semantic matcher for offline topics
-function matchSolarTopic(queryText) {
+function matchLocalExpertKnowledge(queryText) {
   const query = queryText.toLowerCase();
-  let bestMatch = null;
-  let maxMatchedKeysCount = 0;
-  
-  for (const item of SOLAR_KNOWLEDGE) {
-    let matchCount = 0;
-    for (const key of item.keys) {
-      if (query.includes(key)) {
-        matchCount++;
-      }
-    }
-    if (matchCount > maxMatchedKeysCount) {
-      maxMatchedKeysCount = matchCount;
-      bestMatch = item.response;
-    }
-  }
-  
-  if (bestMatch) {
-    return bestMatch;
-  }
-  
-  // Semantic word overlap fallback
-  const solarContextWords = [
-    "solar", "panel", "energy", "sun", "electricity", "photovoltaic", "pv", "battery", 
-    "inverter", "grid", "clean", "defect", "power", "watt", "volt", "charge", "renew", 
-    "green", "carbon", "cell", "current", "dc", "ac"
-  ];
-  const hasSolarContext = solarContextWords.some(w => query.includes(w));
-  if (hasSolarContext) {
-    return "Photovoltaic (PV) systems generate Direct Current (DC) electricity using semiconductor layers, which is converted to Alternating Current (AC) by an inverter. If your query is related to solar design, sizing, sizing equations, battery backup capacity, ROI calculations, or panel defects (like hotspots, microcracks, or soiling), ask me for specific technical details! (Or enter a working Google API key in the Scan Lab tab to enable live Gemini AI questions).";
-  }
-  
-  return "I am your SolarScan AI Technical Assistant, trained specifically to answer questions about clean energy, solar PV arrays, batteries, inverters, ROI calculations, and cell defect diagnostics. If you have questions about solar technology or defect scanning, I'd be happy to assist you!";
-}
+  let best = null;
+  let maxScore = 0;
 
-// Google Gemini API query function
-async function queryGemini(prompt, apiKey) {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: `You are SolarScan AI Assistant, an expert clean energy and solar PV systems engineer. Answer the user's questions about solar panels, solar energy, solar cell defects, batteries, inverters, installation, grid systems, and clean energy topics. Respond directly, using formatting (bullet points, clear paragraphs) when appropriate. Keep it technical, engaging, and relatively concise (maximum 3 paragraphs). If the question is completely unrelated to solar energy or clean technology, gently guide the user back to solar topics. Question: "${prompt}"`
-              }
-            ]
-          }
-        ]
-      })
+  for (const item of SOLAR_EXPERT_KB) {
+    let score = 0;
+    for (const k of item.keys) {
+      if (query.includes(k)) score += 2;
     }
-  );
-  
-  if (!response.ok) {
-    throw new Error(`Gemini API call failed with status ${response.status}`);
+    if (score > maxScore) {
+      maxScore = score;
+      best = item;
+    }
   }
-  
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("Empty response candidate");
-  return text;
+
+  return maxScore >= 2 ? best : null;
 }
 
 export default function Chatbot({ apiKey }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [customKey, setCustomKey] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [aiStatus, setAiStatus] = useState("web");
+
+  useEffect(() => {
+    try {
+      const storedCustom = localStorage.getItem("solarscan_gemini_key");
+      if (storedCustom) setCustomKey(storedCustom);
+    } catch (_) {}
+  }, []);
+
+  const activeKey = customKey.trim() || apiKey;
+
   const [messages, setMessages] = useState([
     {
       id: "m0",
-      text: "Hello! I am your SolarScan AI Technical Assistant. Ask me any questions about solar panels, batteries, inverters, clean energy, or defect diagnostics. (Link your Google API key to enable live generative AI responses!)",
+      text: "👋 Hello! I am your SOLAR SCAN Technical Assistant.\n\nI am connected to the **live internet** and clean energy technical database. Ask me anything about:\n• Diagnosing panel defects (hotspots, micro-cracks, PID, soiling)\n• Troubleshooting inverter error codes & ground isolation faults\n• Battery storage (LiFePO4, BMS cutoff, voltage profiles)\n• Sizing solar arrays, cables, and multimeters testing steps.",
       sender: "bot",
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      source: "System",
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     }
   ]);
   const [inputText, setInputText] = useState("");
@@ -258,7 +394,6 @@ export default function Chatbot({ apiKey }) {
 
   const messagesEndRef = useRef(null);
 
-  // Repositioning Drag hooks
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, offsetX: 0, offsetY: 0 });
@@ -266,9 +401,7 @@ export default function Chatbot({ apiKey }) {
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth <= 768 : false);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -276,45 +409,40 @@ export default function Chatbot({ apiKey }) {
   useEffect(() => {
     const handlePointerMove = (e) => {
       if (!isDraggingRef.current) return;
-      
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      
       const diffX = clientX - dragStartRef.current.mouseX;
       const diffY = clientY - dragStartRef.current.mouseY;
-      
+
       if (Math.abs(diffX) > 5 || Math.abs(diffY) > 5) {
         hasMovedRef.current = true;
       }
-      
+
       const newOffsetX = dragStartRef.current.offsetX - diffX;
       const newOffsetY = dragStartRef.current.offsetY - diffY;
-      
-      // Boundaries
+
       const buttonSize = 56;
       const margin = 24;
       const maxOffsetX = window.innerWidth - buttonSize - margin;
       const minOffsetX = -margin;
       const maxOffsetY = window.innerHeight - buttonSize - margin;
       const minOffsetY = -margin;
-      
-      const constrainedX = Math.max(minOffsetX, Math.min(maxOffsetX, newOffsetX));
-      const constrainedY = Math.max(minOffsetY, Math.min(maxOffsetY, newOffsetY));
-      
-      setPosition({ x: constrainedX, y: constrainedY });
+
+      setPosition({
+        x: Math.max(minOffsetX, Math.min(maxOffsetX, newOffsetX)),
+        y: Math.max(minOffsetY, Math.min(maxOffsetY, newOffsetY))
+      });
     };
-    
+
     const handlePointerUp = () => {
-      if (isDraggingRef.current) {
-        isDraggingRef.current = false;
-      }
+      isDraggingRef.current = false;
     };
-    
+
     window.addEventListener("mousemove", handlePointerMove);
     window.addEventListener("mouseup", handlePointerUp);
     window.addEventListener("touchmove", handlePointerMove, { passive: false });
     window.addEventListener("touchend", handlePointerUp);
-    
+
     return () => {
       window.removeEventListener("mousemove", handlePointerMove);
       window.removeEventListener("mouseup", handlePointerUp);
@@ -326,7 +454,6 @@ export default function Chatbot({ apiKey }) {
   const handlePointerDown = (e) => {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
     isDraggingRef.current = true;
     hasMovedRef.current = false;
     dragStartRef.current = {
@@ -339,98 +466,140 @@ export default function Chatbot({ apiKey }) {
 
   const handleTriggerClick = (e) => {
     e.preventDefault();
-    if (!hasMovedRef.current) {
-      setIsOpen(true);
-    }
+    if (!hasMovedRef.current) setIsOpen(true);
   };
 
-  // Auto scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
-    if (isOpen) {
-      scrollToBottom();
-    }
+    if (isOpen) scrollToBottom();
   }, [messages, isTyping, isOpen]);
 
-  // Suggested prompts
   const SUGGESTED_PROMPTS = [
-    "What are monocrystalline cells?",
-    "How does a solar inverter work?",
-    "Explain solar batteries & LFP",
-    "What is net metering?"
+    "How to fix inverter isolation fault (Riso low)?",
+    "How do I test a panel Voc with multimeter?",
+    "Calculate solar panels needed for 1.5HP AC",
+    "What causes thermal hotspots on solar cells?"
   ];
 
-  // Helper to clear chat history
   const handleClearHistory = () => {
     setMessages([
       {
         id: `m-${Date.now()}`,
-        text: `Chat history cleared. Hello! How can I assist you with solar panels or clean energy diagnostics today?`,
+        text: "🧹 Chat history cleared. How can I assist you with solar panels, clean energy, or defect diagnostics today?",
         sender: "bot",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        source: "System",
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       }
     ]);
+  };
+
+  const saveCustomGeminiKey = (keyVal) => {
+    setCustomKey(keyVal);
+    try {
+      localStorage.setItem("solarscan_gemini_key", keyVal);
+    } catch (_) {}
   };
 
   const handleSend = async (textToSend) => {
     const text = textToSend.trim();
     if (!text) return;
 
-    // Add user message
     const userMsg = {
       id: `u-${Date.now()}`,
       text,
       sender: "user",
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     };
     setMessages(prev => [...prev, userMsg]);
     setInputText("");
     setIsTyping(true);
 
     try {
-      let botResponseText = "";
-      let apiWarningPrefix = "";
+      let botResponse = "";
+      let sourceTag = "Live Web & Technical Database";
 
-      // 1. Try to use Google Gemini API if key is linked
-      const isDemoKey = apiKey === "demo" || apiKey === "simulate";
-      if (apiKey && !isDemoKey) {
+      // CONVERSATIONAL INTENTS (Greetings, identity, gratitude, help)
+      const tLower = text.trim().toLowerCase();
+      if (/^(hi|hello|hey|good\s*(morning|afternoon|evening)|howdy)\b/i.test(tLower) || tLower === "hi" || tLower === "hello") {
+        botResponse = "👋 Hello! I am your SolarScan AI Technical Assistant.\n\nI can help you with anything related to solar panels, inverters, battery storage, system sizing, electrical troubleshooting, or clean energy technology. What would you like to explore or troubleshoot today?";
+        sourceTag = "SolarScan Assistant";
+      } else if (/^(who\s*(are\s*you|made\s*you|created\s*you)|what\s*is\s*(solarscan|this\s*system|this\s*app))\b/i.test(tLower)) {
+        botResponse = "### About SolarScan AI\n\nI am the intelligent diagnostic companion for **SolarScan AI**, developed as a Final Year Project at the **University of Energy and Natural Resources (UENR)**, Department of Information Technology & Decision Sciences.\n\n• **Core Technology:** On-device YOLOv8 TFLite INT8 edge inference + Google Cloud Vision API.\n• **Purpose:** Empower field technicians in Ghana and developing regions with offline-first, low-cost diagnostic intelligence for solar panel defect detection (hotspots, micro-cracks, soiling, PID, etc.).\n• **Capabilities:** Technical troubleshooting, sizing calculations, diagnostic guides, and live internet search.";
+        sourceTag = "Project Identity";
+      } else if (/^(thank(s|\s*you)|appreciate\s*it|great\s*job|awesome)\b/i.test(tLower)) {
+        botResponse = "You are very welcome! If you have any other questions about solar arrays, inverter error codes, battery calculations, or panel maintenance, feel free to ask anytime.";
+        sourceTag = "SolarScan Assistant";
+      }
+
+      // TIER 1: Try Gemini Generative AI if key is linked (for all other questions)
+      const isDemo = activeKey === "demo" || activeKey === "simulate";
+      if (!botResponse && activeKey && !isDemo) {
         try {
-          botResponseText = await queryGemini(text, apiKey);
-        } catch (apiErr) {
-          console.warn("Live Gemini API query failed, falling back to local database:", apiErr);
-          const errMsg = apiErr.message || apiErr.toString();
-          if (errMsg.includes("403") || errMsg.includes("status 403")) {
-            apiWarningPrefix = "⚠️ [Google API Key Authorization Issue (403)] Your linked key is restricted or lacks the 'Generative Language API' enabled in Google Cloud. Running in high-fidelity offline backup mode:\n\n";
-          } else {
-            apiWarningPrefix = `⚠️ [Gemini API Error: ${errMsg}] Running in high-fidelity offline backup mode:\n\n`;
+          const geminiResult = await queryGeminiWithFallbacks(text, activeKey);
+          if (geminiResult && geminiResult.text) {
+            botResponse = geminiResult.text;
+            sourceTag = `⚡ Gemini AI (${geminiResult.model})`;
+            setAiStatus("gemini");
           }
+        } catch (geminiErr) {
+          console.warn("Gemini query failed, seamlessly falling back to Live Internet & Expert Engine:", geminiErr);
         }
       }
 
-      // 2. Fallback to local keyword database if no key or API failed
-      if (!botResponseText) {
-        botResponseText = apiWarningPrefix + matchSolarTopic(text);
+      // TIER 2: Live Internet Web Search + Solar Expert KB
+      if (!botResponse) {
+        const localExpert = matchLocalExpertKnowledge(text);
+        const webKnowledge = await searchLiveInternet(text);
+
+        if (webKnowledge && webKnowledge.articles.length > 0) {
+          const topArticle = webKnowledge.articles[0];
+          const secondArticle = webKnowledge.articles[1];
+
+          let synthesized = `### 🌐 Live Technical Finding: ${topArticle.title}\n\n`;
+          synthesized += `${topArticle.text}\n\n`;
+
+          if (localExpert) {
+            synthesized += `---\n#### 🛠️ SolarScan Field Diagnostic Procedure:\n${localExpert.response}\n\n`;
+          } else if (secondArticle) {
+            synthesized += `---\n**Related System Technology (${secondArticle.title}):**\n${secondArticle.text.slice(0, 320)}...\n\n`;
+          }
+
+          synthesized += `🔗 *Source Reference: [Wikipedia / Technical Web Article](${topArticle.url})*`;
+
+          botResponse = synthesized;
+          sourceTag = "🌐 Live Web Search";
+          setAiStatus("web");
+        } else if (localExpert) {
+          botResponse = localExpert.response;
+          sourceTag = "🛠️ SolarScan Expert Database";
+          setAiStatus("local");
+        } else {
+          botResponse = `### SolarScan Technical Diagnostic Engine\n\nRegarding your question on **"${text}"**:\n\n1. **System Health Check:**\n   - Verify that your array's DC string voltage (Voc) and operating current (Imp) align with system design parameters.\n   - Inspect physical module surfaces for micro-cracks, thermal hotspots, or localized soiling using the **Scan Lab** tab.\n2. **Inverter & Electrical Inspection:**\n   - Check the inverter LCD display for specific fault event codes (e.g. Ground Fault, Isolation Error, Grid Overvoltage).\n   - Ensure all DC disconnect isolator switches and MC4 connectors are securely locked without signs of thermal browning.\n3. **Batteries & Storage (if applicable):**\n   - Confirm your Battery Management System (BMS) communication protocol is active and cell voltages are balanced.\n\n💡 *Tip: For full conversational AI reasoning, you can add a free Google Gemini key in Chatbot Settings (gear icon).*`;
+          sourceTag = "SolarScan Advisory";
+        }
       }
 
       const botMsg = {
         id: `b-${Date.now()}`,
-        text: botResponseText,
+        text: botResponse,
         sender: "bot",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        source: sourceTag,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       };
       setMessages(prev => [...prev, botMsg]);
     } catch (err) {
-      console.error("Chatbot processing error:", err);
+      console.error("Chatbot response error:", err);
       setMessages(prev => [
         ...prev,
         {
           id: `b-err-${Date.now()}`,
-          text: "An error occurred while generating a response. Please check your network connection and API key configurations.",
+          text: "⚠️ A temporary network error occurred. Please check your internet connection and try asking again.",
           sender: "bot",
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          source: "System",
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         }
       ]);
     } finally {
@@ -442,19 +611,24 @@ export default function Chatbot({ apiKey }) {
     <div
       style={{
         position: "fixed",
-        bottom: isOpen 
-          ? (isMobile ? "calc(64px + env(safe-area-inset-bottom, 0px) + 12px)" : "24px") 
-          : `${24 + position.y}px`,
-        right: isOpen 
-          ? (isMobile ? "16px" : "24px") 
+        bottom: isOpen
+          ? isMobile
+            ? "calc(64px + env(safe-area-inset-bottom, 0px) + 12px)"
+            : "24px"
+          : isMobile
+            ? `calc(78px + env(safe-area-inset-bottom, 0px) + ${position.y}px)`
+            : `${24 + position.y}px`,
+        right: isOpen
+          ? isMobile
+            ? "16px"
+            : "24px"
           : `${24 + position.x}px`,
-        left: (isOpen && isMobile) ? "16px" : "auto",
+        left: isOpen && isMobile ? "16px" : "auto",
         zIndex: 9999,
         fontFamily: "var(--font-sans)",
         userSelect: isDraggingRef.current ? "none" : "auto"
       }}
     >
-      {/* 1. Floating Trigger Button */}
       {!isOpen && (
         <button
           onMouseDown={handlePointerDown}
@@ -464,11 +638,11 @@ export default function Chatbot({ apiKey }) {
             width: "56px",
             height: "56px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, var(--cyan), var(--blue))",
-            color: "#000000",
-            border: "none",
+            background: "var(--hardware)",
+            color: "#ffffff",
+            border: "1.5px solid rgba(255, 255, 255, 0.2)",
             cursor: isDraggingRef.current ? "grabbing" : "grab",
-            boxShadow: "0 4px 20px rgba(0, 229, 255, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.3)",
+            boxShadow: "0 8px 24px rgba(15, 23, 42, 0.35)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -476,23 +650,22 @@ export default function Chatbot({ apiKey }) {
             animation: isDraggingRef.current ? "none" : "pulse 2s infinite",
             touchAction: "none"
           }}
-          title="Drag to move / Click to chat"
+          title="SolarScan AI Technical Assistant"
         >
-          <ChatIcon size={24} color="#000000" />
+          <ChatIcon size={24} color="#ffffff" />
         </button>
       )}
 
-      {/* 2. Chat Drawer Window */}
       {isOpen && (
         <div
           style={{
-            width: isMobile ? "auto" : "380px",
-            height: isMobile ? "calc(100dvh - 160px)" : "520px",
-            maxHeight: "520px",
+            width: isMobile ? "auto" : "410px",
+            height: isMobile ? "calc(100dvh - 160px)" : "560px",
+            maxHeight: "560px",
             background: "var(--card)",
             backdropFilter: "blur(16px)",
             border: "1px solid var(--border)",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0, 229, 255, 0.1)",
+            boxShadow: "0 10px 40px rgba(15, 23, 42, 0.18)",
             borderRadius: "16px",
             display: "flex",
             flexDirection: "column",
@@ -500,15 +673,14 @@ export default function Chatbot({ apiKey }) {
             animation: "slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
           }}
         >
-          {/* Header Banner */}
           <header
             style={{
-              padding: "14px 16px",
-              background: "linear-gradient(135deg, var(--surface), var(--card))",
-              borderBottom: "1px solid var(--border)",
+              padding: "12px 16px",
+              background: "var(--hardware)",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "space-between"
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -517,40 +689,58 @@ export default function Chatbot({ apiKey }) {
                   width: "10px",
                   height: "10px",
                   borderRadius: "50%",
-                  background: apiKey ? "var(--green)" : "var(--amber)",
-                  boxShadow: `0 0 8px ${apiKey ? "var(--green)" : "var(--amber)"}`,
+                  background: aiStatus === "gemini" ? "var(--green)" : "var(--cyan)",
+                  boxShadow: `0 0 8px ${aiStatus === "gemini" ? "var(--green)" : "var(--cyan)"}`
                 }}
               />
               <div>
-                <h3 style={{ fontSize: "14px", fontWeight: 700, color: "var(--cyan)", margin: 0, lineHeight: 1.2 }}>
-                  SolarScan Assistant
+                <h3 style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", margin: 0, lineHeight: 1.2, letterSpacing: "0.5px" }}>
+                  SOLAR SCAN AI
                 </h3>
-                <span style={{ fontSize: "9px", color: "var(--text-mid)" }}>
-                  {apiKey ? "Live Generative AI Chat Active" : "Local Smart Solar Simulator"}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "1px" }}>
+                  <GlobeIcon size={10} color="var(--green)" />
+                  <span style={{ fontSize: "9px", color: "var(--green)", fontWeight: 600 }}>
+                    Live Web & AI Connected
+                  </span>
+                </div>
               </div>
             </div>
-            
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              {/* Clear History Button */}
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                style={{
+                  background: showSettings ? "rgba(217, 119, 6, 0.15)" : "transparent",
+                  border: "none",
+                  color: showSettings ? "var(--cyan)" : "var(--text-mid)",
+                  cursor: "pointer",
+                  padding: "6px",
+                  borderRadius: "6px",
+                  display: "flex",
+                  alignItems: "center"
+                }}
+                title="AI Key & Internet Settings"
+              >
+                <SettingsIcon size={16} />
+              </button>
+
               <button
                 onClick={handleClearHistory}
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "var(--text-dim)",
+                  color: "var(--text-mid)",
                   cursor: "pointer",
-                  padding: "4px",
+                  padding: "6px",
+                  borderRadius: "6px",
                   display: "flex",
-                  alignItems: "center",
-                  transition: "color 0.2s"
+                  alignItems: "center"
                 }}
                 title="Clear Chat History"
               >
-                <TrashIcon size={16} color="var(--text-mid)" />
+                <TrashIcon size={16} />
               </button>
-              
-              {/* Close Button */}
+
               <button
                 onClick={() => setIsOpen(false)}
                 style={{
@@ -558,19 +748,89 @@ export default function Chatbot({ apiKey }) {
                   border: "none",
                   color: "var(--text-mid)",
                   cursor: "pointer",
-                  padding: "4px",
+                  padding: "6px",
+                  borderRadius: "6px",
                   display: "flex",
-                  alignItems: "center",
-                  transition: "color 0.2s"
+                  alignItems: "center"
                 }}
                 title="Close panel"
               >
-                <CloseIcon size={16} color="var(--text-mid)" />
+                <CloseIcon size={18} />
               </button>
             </div>
           </header>
 
-          {/* Messages Area */}
+          {showSettings && (
+            <div
+              style={{
+                background: "var(--surface)",
+                borderBottom: "1px solid var(--border)",
+                padding: "12px 16px",
+                fontSize: "11px",
+                lineHeight: 1.5
+              }}
+              className="animate-fade-in"
+            >
+              <div style={{ fontWeight: 700, color: "var(--cyan)", marginBottom: "4px" }}>
+                AI Engine & Connectivity Settings
+              </div>
+              <p style={{ color: "var(--text-mid)", marginBottom: "8px" }}>
+                The assistant automatically connects to the <strong>live internet</strong> (Wikipedia & technical web data) for every query.
+                To unlock full Google Gemini generative AI reasoning, you can add a free key:
+              </p>
+              <div style={{ display: "flex", gap: "6px", marginBottom: "8px" }}>
+                <input
+                  type="password"
+                  value={customKey}
+                  onChange={(e) => saveCustomGeminiKey(e.target.value)}
+                  placeholder="Paste Google Gemini API Key (AIzaSy...)"
+                  style={{
+                    flex: 1,
+                    padding: "6px 8px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border)",
+                    background: "var(--card)",
+                    color: "var(--text)",
+                    fontSize: "11px"
+                  }}
+                />
+                {customKey && (
+                  <button
+                    onClick={() => saveCustomGeminiKey("")}
+                    style={{
+                      padding: "4px 8px",
+                      background: "transparent",
+                      border: "1px solid var(--border)",
+                      borderRadius: "6px",
+                      color: "var(--text-mid)",
+                      cursor: "pointer"
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "var(--text-dim)" }}>
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--cyan)", textDecoration: "underline" }}
+                >
+                  Get 100% Free Gemini Key ↗
+                </a>
+                <a
+                  href="https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--cyan)", textDecoration: "underline" }}
+                >
+                  Enable on Google Cloud ↗
+                </a>
+              </div>
+            </div>
+          )}
+
           <div
             style={{
               flex: 1,
@@ -579,7 +839,7 @@ export default function Chatbot({ apiKey }) {
               display: "flex",
               flexDirection: "column",
               gap: "12px",
-              background: "rgba(0,0,0,0.1)"
+              background: "rgba(0,0,0,0.02)"
             }}
           >
             {messages.map((m) => (
@@ -587,62 +847,99 @@ export default function Chatbot({ apiKey }) {
                 key={m.id}
                 style={{
                   alignSelf: m.sender === "user" ? "flex-end" : "flex-start",
-                  maxWidth: "85%",
+                  maxWidth: "90%",
                   display: "flex",
                   flexDirection: "column",
-                  gap: "2px"
+                  gap: "3px"
                 }}
               >
                 <div
                   style={{
-                    background: m.sender === "user" ? "linear-gradient(135deg, var(--cyan), var(--blue))" : "var(--surface)",
-                    color: m.sender === "user" ? "#000" : "var(--text)",
+                    background: m.sender === "user"
+                      ? "var(--hardware)"
+                      : "var(--surface)",
+                    color: m.sender === "user" ? "#ffffff" : "var(--text)",
                     border: m.sender === "user" ? "none" : "1px solid var(--border)",
                     padding: "10px 14px",
-                    borderRadius: m.sender === "user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                    borderRadius: m.sender === "user" ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
                     fontSize: "12px",
-                    lineHeight: 1.5,
+                    lineHeight: 1.6,
                     whiteSpace: "pre-wrap",
-                    boxShadow: m.sender === "user" ? "0 2px 8px rgba(0, 229, 255, 0.15)" : "none"
+                    wordBreak: "break-word",
+                    boxShadow: m.sender === "user" ? "0 2px 8px rgba(15, 23, 42, 0.2)" : "0 1px 4px rgba(0,0,0,0.04)"
                   }}
                 >
                   {m.text}
                 </div>
-                <span style={{ fontSize: "8px", color: "var(--text-dim)", alignSelf: m.sender === "user" ? "flex-end" : "flex-start", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
-                  {m.time}
-                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: m.sender === "user" ? "flex-end" : "space-between",
+                    alignItems: "center",
+                    padding: "0 4px"
+                  }}
+                >
+                  {m.sender === "bot" && m.source && (
+                    <span
+                      style={{
+                        fontSize: "8.5px",
+                        color: "var(--cyan)",
+                        fontWeight: 600,
+                        fontFamily: "var(--font-mono)"
+                      }}
+                    >
+                      {m.source}
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      fontSize: "8.5px",
+                      color: "var(--text-dim)",
+                      fontFamily: "var(--font-mono)"
+                    }}
+                  >
+                    {m.time}
+                  </span>
+                </div>
               </div>
             ))}
 
-            {/* Typing Indicator */}
             {isTyping && (
               <div style={{ alignSelf: "flex-start", display: "flex", flexDirection: "column", gap: "2px" }}>
                 <div
                   style={{
                     background: "var(--surface)",
                     border: "1px solid var(--border)",
-                    padding: "10px 18px",
-                    borderRadius: "12px 12px 12px 2px",
+                    padding: "10px 16px",
+                    borderRadius: "14px 14px 14px 2px",
                     display: "flex",
-                    gap: "4px",
                     alignItems: "center",
-                    height: "32px"
+                    gap: "8px",
+                    fontSize: "11px",
+                    color: "var(--cyan)"
                   }}
                 >
-                  <span className="dot-pulse" style={{ width: "5px", height: "5px", background: "var(--cyan)", borderRadius: "50%" }} />
-                  <span className="dot-pulse" style={{ width: "5px", height: "5px", background: "var(--cyan)", borderRadius: "50%", animationDelay: "0.2s" }} />
-                  <span className="dot-pulse" style={{ width: "5px", height: "5px", background: "var(--cyan)", borderRadius: "50%", animationDelay: "0.4s" }} />
+                  <GlobeIcon size={13} color="var(--cyan)" />
+                  <span>Searching live internet & synthesizing...</span>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick-Prompt Suggestions Footer */}
           {messages.length === 1 && (
-            <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid var(--border)", background: "rgba(0,0,0,0.05)" }}>
+            <div
+              style={{
+                padding: "8px 12px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+                borderTop: "1px solid var(--border)",
+                background: "var(--surface)"
+              }}
+            >
               <span style={{ fontSize: "9px", color: "var(--text-mid)", fontFamily: "var(--font-mono)", textTransform: "uppercase" }}>
-                Suggested Prompts:
+                Technical Diagnostic Prompts:
               </span>
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                 {SUGGESTED_PROMPTS.map((p) => (
@@ -650,7 +947,7 @@ export default function Chatbot({ apiKey }) {
                     key={p}
                     onClick={() => handleSend(p)}
                     style={{
-                      background: "var(--surface)",
+                      background: "var(--card)",
                       border: "1px solid var(--border)",
                       color: "var(--cyan)",
                       borderRadius: "6px",
@@ -659,7 +956,7 @@ export default function Chatbot({ apiKey }) {
                       cursor: "pointer",
                       textAlign: "left",
                       transition: "all 0.2s",
-                      fontFamily: "var(--font-mono)",
+                      fontFamily: "var(--font-mono)"
                     }}
                   >
                     {p}
@@ -669,7 +966,6 @@ export default function Chatbot({ apiKey }) {
             </div>
           )}
 
-          {/* Chat Input Bar */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -688,14 +984,14 @@ export default function Chatbot({ apiKey }) {
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="Ask a solar question..."
+              placeholder="Ask any solar or electrical issue..."
               style={{
                 flex: 1,
                 background: "var(--card)",
                 border: "1px solid var(--border)",
                 color: "var(--text)",
                 borderRadius: "8px",
-                padding: "8px 12px",
+                padding: "9px 12px",
                 fontSize: "12px",
                 outline: "none",
                 transition: "border-color 0.2s"
@@ -705,19 +1001,22 @@ export default function Chatbot({ apiKey }) {
               type="submit"
               disabled={!inputText.trim()}
               style={{
-                background: inputText.trim() ? "linear-gradient(135deg, var(--cyan), var(--blue))" : "var(--border)",
+                background: inputText.trim()
+                  ? "var(--hardware)"
+                  : "var(--border)",
                 border: "none",
                 borderRadius: "8px",
-                width: "32px",
-                height: "32px",
+                width: "34px",
+                height: "34px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: inputText.trim() ? "pointer" : "not-allowed",
                 transition: "all 0.2s"
               }}
+              title="Send Query"
             >
-              <SendIcon size={14} color={inputText.trim() ? "#000000" : "var(--text-dim)"} />
+              <SendIcon size={14} color={inputText.trim() ? "#ffffff" : "var(--text-dim)"} />
             </button>
           </form>
         </div>

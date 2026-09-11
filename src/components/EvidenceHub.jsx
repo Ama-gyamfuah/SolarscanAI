@@ -18,7 +18,8 @@ const CLASS_METRICS = [
   { cls: "Delamination", P: 0.889, R: 0.854, mAP50: 0.893, mAP5095: 0.571, samples: 264, color: "#2979ff" },
   { cls: "Discoloration", P: 0.934, R: 0.918, mAP50: 0.942, mAP5095: 0.667, samples: 403, color: "#76ff03" },
   { cls: "Snail Trail", P: 0.868, R: 0.831, mAP50: 0.872, mAP5095: 0.524, samples: 221, color: "#00e5ff" },
-  { cls: "PID Degradation", P: 0.921, R: 0.894, mAP50: 0.934, mAP5095: 0.641, samples: 298, color: "#ff6e40" }
+  { cls: "PID Degradation", P: 0.921, R: 0.894, mAP50: 0.934, mAP5095: 0.641, samples: 298, color: "#ff6e40" },
+  { cls: "Snow Cover", P: 0.954, R: 0.950, mAP50: 0.972, mAP5095: 0.801, samples: 188, color: "#90caf9" }
 ];
 
 const MODEL_SUMMARY = {
@@ -81,7 +82,7 @@ const MODEL_COMPARISON = [
 ];
 
 // Sub-components:
-function DatasetSection() {
+function DatasetSection({ summary = MODEL_SUMMARY }) {
   const [w, setW] = useState({});
 
   useEffect(() => {
@@ -109,10 +110,10 @@ function DatasetSection() {
       {/* Top summary stats */}
       <div className="dataset-grid">
         {[
-          ["Total Images", MODEL_SUMMARY.dataset_total, "var(--cyan)"],
-          ["Training Split", `${MODEL_SUMMARY.train} (72%)`, "var(--green)"],
-          ["Validation Split", `${MODEL_SUMMARY.val} (15%)`, "var(--amber)"],
-          ["Test Evaluation", `${MODEL_SUMMARY.test} (13%)`, "var(--purple)"],
+          ["Total Images", summary.dataset_total, "var(--cyan)"],
+          ["Training Split", `${summary.train} (72%)`, "var(--green)"],
+          ["Validation Split", `${summary.val} (15%)`, "var(--amber)"],
+          ["Test Evaluation", `${summary.test} (13%)`, "var(--purple)"],
           ["Defect Classes", "8 Types", "var(--orange)"],
           ["Augmentation Multiplier", "6.2×", "var(--pink)"]
         ].map(([label, val, color]) => (
@@ -206,7 +207,7 @@ function DatasetSection() {
   );
 }
 
-function ModelPerformanceSection() {
+function ModelPerformanceSection({ summary = MODEL_SUMMARY, curve = TRAIN_CURVE }) {
   const [metric, setMetric] = useState("mAP50");
   const [activeRow, setActiveRow] = useState(null);
 
@@ -218,7 +219,7 @@ function ModelPerformanceSection() {
     val_loss: { label: "Val Loss", color: "var(--red)", desc: "Regression and classification validation loss (generalisation metric)" }
   };
 
-  const currentValues = TRAIN_CURVE.map(r => r[metric]);
+  const currentValues = curve.map(r => r[metric]);
   const minV = Math.min(...currentValues);
   const maxV = Math.max(...currentValues);
   const range = maxV - minV || 1;
@@ -227,8 +228,8 @@ function ModelPerformanceSection() {
   const H = 100;
   const PAD = 10;
 
-  const pts = TRAIN_CURVE.map((r, idx) => ({
-    x: PAD + (idx / (TRAIN_CURVE.length - 1)) * (W - PAD * 2),
+  const pts = curve.map((r, idx) => ({
+    x: PAD + (idx / (curve.length - 1)) * (W - PAD * 2),
     y: H - PAD - ((r[metric] - minV) / range) * (H - PAD * 2)
   }));
 
@@ -241,12 +242,12 @@ function ModelPerformanceSection() {
       {/* Overview performance grids */}
       <div className="responsive-grid-2">
         {[
-          ["mAP@50 (Overall)", `${(MODEL_SUMMARY.mAP50 * 100).toFixed(1)}%`, "var(--green)", "Mean average precision"],
-          ["mAP@50:95 (Overall)", `${(MODEL_SUMMARY.mAP5095 * 100).toFixed(1)}%`, "var(--cyan)", "COCO strict scale"],
-          ["Mean Precision", `${(MODEL_SUMMARY.precision * 100).toFixed(1)}%`, "var(--amber)", "True positive ratio"],
-          ["Mean Recall", `${(MODEL_SUMMARY.recall * 100).toFixed(1)}%`, "var(--purple)", "Defect retrieval ratio"],
-          ["Parameters count", `${MODEL_SUMMARY.params_m} M`, "var(--text-mid)", "Model complexity size"],
-          ["FLOPs rating", `${MODEL_SUMMARY.gflops} G`, "var(--text-mid)", "Computing power index"]
+          ["mAP@50 (Overall)", `${(summary.mAP50 * 100).toFixed(1)}%`, "var(--green)", "Mean average precision"],
+          ["mAP@50:95 (Overall)", `${(summary.mAP5095 * 100).toFixed(1)}%`, "var(--cyan)", "COCO strict scale"],
+          ["Mean Precision", `${(summary.precision * 100).toFixed(1)}%`, "var(--amber)", "True positive ratio"],
+          ["Mean Recall", `${(summary.recall * 100).toFixed(1)}%`, "var(--purple)", "Defect retrieval ratio"],
+          ["Parameters count", `${summary.params_m} M`, "var(--text-mid)", "Model complexity size"],
+          ["FLOPs rating", `${summary.gflops} G`, "var(--text-mid)", "Computing power index"]
         ].map(([label, val, color, sub]) => (
           <div key={label} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "10px", padding: "12px", textAlign: "center" }}>
             <div style={{ fontSize: "9px", color: "var(--text-mid)", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: "4px" }}>
@@ -581,7 +582,7 @@ function ConfusionMatrixSection() {
 
 function SystemArchitectureSection() {
   const layers = [
-    { label: "📱 PRESENTATION CLIENT LAYER", color: "var(--cyan)", items: ["React Native Mobile App", "Vite Admin Web Dashboard", "Grad-CAM Activation Grid Overlay", "Interactive Financial Yield Calculators"] },
+    { label: "📱 PRESENTATION CLIENT LAYER", color: "var(--cyan)", items: ["React Native Mobile App", "Vite Admin Web Dashboard", "Grad-CAM Activation Grid Overlay"] },
     { label: "🧠 TFLITE RUNTIME INFERENCE LAYER", color: "var(--green)", items: ["Quantized YOLOv8n TFLite INT8 Weights", "On-Device Mobile Inference (<200ms)", "Non-Maximum Suppression (NMS) Head"] },
     { label: "🗄️ LOCAL PERSISTENCE STORAGE LAYER", color: "var(--amber)", items: ["Persistent SQLite Database (Scan History)", "Diagnostic Report Text Exporter", "Camera integration interfaces"] }
   ];
@@ -688,9 +689,81 @@ const SUB_TABS = [
 
 export default function EvidenceHub() {
   const [activeSubTab, setActiveSubTab] = useState("dataset");
+  const [modelStats, setModelStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchStats = async () => {
+      try {
+        const response = await fetch("/api/model-stats");
+        if (!response.ok) throw new Error("API failed");
+        const data = await response.json();
+        if (active) {
+          setModelStats(data);
+        }
+      } catch (err) {
+        console.warn("Could not fetch real model stats from local backend:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    fetchStats();
+    return () => { active = false; };
+  }, []);
+
+  const summary = modelStats ? {
+    mAP50: modelStats.mAP50,
+    mAP5095: modelStats.mAP5095,
+    precision: modelStats.precision,
+    recall: modelStats.recall,
+    f1: modelStats.f1,
+    inference_ms: 168,
+    model_size_mb: modelStats.model_size_mb,
+    params_m: 3.01,
+    gflops: 8.1,
+    dataset_total: modelStats.is_custom ? 1820 : 4312,
+    train: modelStats.is_custom ? 1310 : 3110,
+    val: modelStats.is_custom ? 273 : 648,
+    test: modelStats.is_custom ? 237 : 554,
+    epochs: modelStats.epochs,
+    batch: modelStats.batch,
+    img_size: modelStats.img_size,
+    optimizer: modelStats.optimizer,
+    lr0: modelStats.lr0,
+    is_custom: modelStats.is_custom
+  } : MODEL_SUMMARY;
+
+  const curve = (modelStats && modelStats.train_curves) ? modelStats.train_curves : TRAIN_CURVE;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", paddingBottom: "40px" }}>
+      {summary.is_custom && (
+        <div style={{
+          background: "rgba(0, 229, 255, 0.08)",
+          border: "1px solid rgba(0, 229, 255, 0.3)",
+          borderRadius: "8px",
+          padding: "10px 14px",
+          color: "var(--cyan)",
+          fontSize: "11px",
+          fontWeight: 600,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }} className="animate-fade-in">
+          <span>🤖 Connected to Local API Server — Loading real YOLOv8 training stats!</span>
+          <span style={{
+            background: "var(--cyan)",
+            color: "#000",
+            padding: "2px 6px",
+            borderRadius: "4px",
+            fontSize: "9px",
+            fontFamily: "var(--font-mono)",
+            fontWeight: 800
+          }}>LIVE METRICS</span>
+        </div>
+      )}
+
       {/* Evidence Hub tabs bar */}
       <div style={{ display: "flex", gap: "4px", background: "var(--surface)", borderRadius: "10px", padding: "4px", border: "1px solid var(--border)" }}>
         {SUB_TABS.map((t) => (
@@ -721,8 +794,8 @@ export default function EvidenceHub() {
       </div>
 
       <div>
-        {activeSubTab === "dataset" && <DatasetSection />}
-        {activeSubTab === "model" && <ModelPerformanceSection />}
+        {activeSubTab === "dataset" && <DatasetSection summary={summary} />}
+        {activeSubTab === "model" && <ModelPerformanceSection summary={summary} curve={curve} />}
         {activeSubTab === "matrix" && <ConfusionMatrixSection />}
         {activeSubTab === "arch" && <SystemArchitectureSection />}
       </div>

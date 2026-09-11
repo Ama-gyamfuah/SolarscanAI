@@ -1,0 +1,6 @@
+{
+  "appId": "com.solarscan.ai",
+  "appName": "SolarScan AI",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

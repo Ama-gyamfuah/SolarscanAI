@@ -47,18 +47,20 @@ export default function Analytics({ history }) {
     );
   }
 
-  // Calculate aggregated stats
+  // Calculate aggregated stats — guard against malformed history entries
   const totalScans = history.length;
   
-  const allDetections = history.flatMap(h => h.result.detections);
+  const allDetections = history
+    .filter(h => h?.result?.detections)
+    .flatMap(h => h.result.detections);
   const totalDefects = allDetections.filter(d => d.type !== "healthy").length;
   
   const criticalDefects = allDetections.filter(
     d => DEFECTS[d.type]?.severity === "critical"
   ).length;
 
-  const avgHealth = history.reduce((sum, h) => sum + h.result.health_score, 0) / totalScans;
-  const avgLoss = history.reduce((sum, h) => sum + h.result.efficiency_loss, 0) / totalScans;
+  const avgHealth = history.reduce((sum, h) => sum + (h?.result?.health_score ?? 100), 0) / totalScans;
+  const avgLoss = history.reduce((sum, h) => sum + (h?.result?.efficiency_loss ?? 0), 0) / totalScans;
 
   // Defect distribution counts
   const defectCounts = allDetections
@@ -72,11 +74,20 @@ export default function Analytics({ history }) {
 
   // Sparkline coordinates mapping
   // Take last 8 scans chronologically (reverse the history which is newest-first)
-  const trendHistory = [...history].slice(0, 8).reverse();
+  const trendHistory = [...history].filter(h => h?.result?.health_score != null).slice(0, 8).reverse();
   const trendData = trendHistory.map((h, idx) => ({
     x: idx,
-    health: Math.round(h.result.health_score),
-    label: new Date(h.result.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    health: Math.round(h.result.health_score ?? 100),
+    label: (() => {
+      try {
+        if (!h.result.timestamp) return `Scan ${idx + 1}`;
+        const d = new Date(h.result.timestamp);
+        if (isNaN(d.getTime())) return `Scan ${idx + 1}`;
+        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      } catch (_) {
+        return `Scan ${idx + 1}`;
+      }
+    })()
   }));
 
   const W = 360;
@@ -97,7 +108,7 @@ export default function Analytics({ history }) {
     : "";
 
   return (
-    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "16px", paddingBottom: "40px" }}>
       {/* Tab Title */}
       <div>
         <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--cyan)" }}>Fleet Health Analytics</h2>

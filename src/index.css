@@ -1,42 +1,104 @@
-/* CSS Variable Declarations - Sunlit Day Light Theme */
+/* Clean 4-Color Hardware & Solar Studio Design System */
 :root {
-  --bg: #fcfbfa;
-  --bg-gradient: radial-gradient(circle at 50% -20%, #fff4db 0%, #fcfbfa 80%); /* Warm sun ray glow at the top */
+  /* COLOR 1: Pure White & Crisp Slate Canvas */
+  --bg: #f8fafc;
+  --bg-gradient: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   --surface: #ffffff;
   --card: #ffffff;
   
-  /* Subtle glassmorphic and neutral borders */
-  --border: rgba(0, 0, 0, 0.06);
-  --border-hi: rgba(0, 0, 0, 0.12);
+  /* Precision Slate Borders */
+  --border: #e2e8f0;
+  --border-hi: #cbd5e1;
   
-  /* Solar Accent Colors - Standardized and cohesive, dark high-contrast for light theme */
-  --cyan: #d97706; /* Polished Solar Amber Gold */
-  --cyan-rgb: 217, 119, 6;
-  --blue: #b45309; /* Terracotta Orange */
-  --blue-rgb: 180, 83, 9;
+  /* COLOR 2: Hardware Command Slate (#0F172A) */
+  --hardware: #0f172a;
+  --hardware-rgb: 15, 23, 42;
+  --hardware-surface: #1e293b;
+  --hardware-border: rgba(255, 255, 255, 0.1);
+
+  /* COLOR 3: Electric Solar Precision Blue (#0284C7) */
+  --cyan: #0284c7;
+  --cyan-rgb: 2, 132, 199;
+  --blue: #0369a1;
+  --blue-rgb: 3, 105, 161;
   
-  /* Matured, light-theme compatible status colors */
-  --green: #15803d; /* Clean Forest Green */
-  --green-rgb: 21, 128, 61;
-  --amber: #b45309; /* Muted Bronze Gold */
-  --amber-rgb: 180, 83, 9;
-  --red: #b91c1c; /* Crimson Red */
-  --red-rgb: 185, 28, 28;
-  --purple: #701a75; /* Deep Plum Purple */
-  --purple-rgb: 112, 26, 117;
-  --pink: #be185d; /* Deep Rose */
-  --orange: #c2410c; /* Deep Copper Orange */
+  /* COLOR 4: Solar Gold Energy Amber (#F59E0B) */
+  --amber: #f59e0b;
+  --amber-rgb: 245, 158, 11;
+
+  /* Status Indicators (Harmonized with 4-Color Logic) */
+  --green: #10b981;
+  --green-rgb: 16, 185, 129;
+  --red: #ef4444;
+  --red-rgb: 239, 68, 68;
+  --purple: #0f172a;
+  --pink: #0284c7;
+  --orange: #f59e0b;
   
-  /* Clean Dark Espresso texts and warm neutral details */
-  --text: #1c1917; /* Clean charcoal dark text */
-  --text-mid: #57534e; /* Warm dark grey */
-  --text-dim: #a8a29e; /* Warm light grey */
+  /* High-Contrast Hardware Typography */
+  --text: #0f172a;       /* Deep Slate 900 */
+  --text-mid: #334155;   /* Slate 700 (High Contrast) */
+  --text-dim: #64748b;   /* Slate 500 (Readable Contrast) */
   
-  --font-sans: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  --font-sans: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Global Dynamic Accessibility Font Scale */
+  --ui-font-scale: 1;
+  --font-base: 15px;
 }
 
-/* Reset and Core Layout */
+/* ─────────────────────────────────────────────────────────────
+   DARK MODE THEME (Night Laboratory / OLED Sleek Hardware Mode)
+   ───────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  /* True OLED Pitch Black Canvas & High-Contrast Cards */
+  --bg: #000000;
+  --bg-gradient: radial-gradient(circle at 50% -20%, #0d1322 0%, #000000 85%);
+  --surface: #0a0a0a;
+  --card: #0e121a;
+  
+  /* Luminous subtle borders */
+  --border: rgba(255, 255, 255, 0.12);
+  --border-hi: rgba(255, 255, 255, 0.25);
+
+  /* Hardware Command Pitch Black in Dark Mode */
+  --hardware: #000000;
+  --hardware-rgb: 0, 0, 0;
+  --hardware-surface: #141414;
+  --hardware-border: rgba(255, 255, 255, 0.16);
+
+  /* Electric Solar Blue (Luminous on True Black) */
+  --cyan: #38bdf8;
+  --cyan-rgb: 56, 189, 248;
+  --blue: #0284c7;
+  --blue-rgb: 2, 132, 199;
+
+  /* Solar Amber (Luminous Gold for Dark Mode) */
+  --amber: #fbbf24;
+  --amber-rgb: 251, 191, 36;
+
+  /* Crisp Typography for True Black Mode - Ultra High Contrast */
+  --text: #ffffff;
+  --text-mid: #e2e8f0;   /* Slate 200 - Bright & Clear */
+  --text-dim: #cbd5e1;   /* Slate 300 - High Contrast for Senior Readers */
+
+  /* Status Indicators (Vibrant on Dark) */
+  --green: #34d399;
+  --green-rgb: 52, 211, 153;
+  --red: #f87171;
+  --red-rgb: 248, 113, 113;
+  --purple: #c084fc;
+  --pink: #38bdf8;
+  --orange: #fbbf24;
+}
+
+/* Reset and Core Layout - SportyBet-style Modern & Clean */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -48,10 +110,12 @@ body {
   background-color: var(--bg);
   background-image: var(--bg-gradient);
   color: var(--text);
-  font-family: var(--font-sans);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
   min-height: 100dvh;
   overflow-x: hidden;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Scrollbar Customisation */
