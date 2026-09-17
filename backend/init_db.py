@@ -96,7 +96,7 @@ def init_db():
         seed_users = [
             ("tech@solarscan.ai", default_pwd_hash, "Kwame Mensah", "technician", "Accra Solar Station #2", "+233 24 555 0101"),
             ("drone@solarscan.ai", default_pwd_hash, "Akosua Osei", "drone_pilot", "West African Drone Survey Unit", "+233 20 555 0202"),
-            ("manager@solarscan.ai", default_pwd_hash, "Dr. Emmanuel Frimpong", "asset_manager", "Regional Solar Plant Operations", "+233 27 555 0303"),
+            ("manager@solarscan.ai", default_pwd_hash, "Ing. Emmanuel Kwabena Mensah", "asset_manager", "Directorate of Solar Plant Infrastructure & Assets", "+233 27 555 0303"),
             ("auditor@solarscan.ai", default_pwd_hash, "Kofi Boateng", "auditor", "Clean Energy QA & Warranty Bureau", "+233 26 555 0404"),
             ("admin@solarscan.ai", default_pwd_hash, "System Administrator", "admin", "Enterprise Central IT Command", "+233 24 555 9999")
         ]

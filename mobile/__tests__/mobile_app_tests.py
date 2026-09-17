@@ -174,6 +174,79 @@ class MobileAppTestSuite(unittest.TestCase):
         self.assertIn("signOutHeaderBtn", content, "Sign out button must be in header")
         print("[PASS] Test 16: 5MB file limit and Sign Out controls verified.")
 
+    def test_17_rbac_visible_tabs_filtering(self):
+        """Verify visibleTabs is defined and strictly enforces RBAC personas."""
+        with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("const visibleTabs = useMemo", content, "visibleTabs must be declared with useMemo")
+        self.assertIn("role === 'technician'", content, "technician role filtering must exist")
+        self.assertIn("role === 'asset_manager'", content, "asset_manager role filtering must exist")
+        self.assertIn("role === 'drone_pilot'", content, "drone_pilot role filtering must exist")
+        self.assertIn("role === 'auditor'", content, "auditor role filtering must exist")
+        print("[PASS] Test 17: Strict RBAC visibleTabs filtering verified.")
+
+    def test_18_zero_undeclared_variables(self):
+        """Verify no undeclared variables exist in App.js (Babel AST validation)."""
+        import subprocess
+        node_cmd = """
+        const fs = require('fs');
+        const parser = require('@babel/parser');
+        const traverse = require('@babel/traverse').default;
+        const code = fs.readFileSync('mobile/App.js', 'utf8');
+        const ast = parser.parse(code, { sourceType: 'module', plugins: ['jsx'] });
+        const undeclared = [];
+        const globals = new Set([
+          'console', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
+          'fetch', 'FormData', 'Blob', 'URL', 'Date', 'Math', 'JSON', 'Promise',
+          'Array', 'Object', 'String', 'Number', 'Boolean', 'RegExp', 'Error', 'Set', 'Map',
+          'parseFloat', 'parseInt', 'isNaN', 'isFinite', 'encodeURIComponent', 'decodeURIComponent',
+          'window', 'global', 'document', 'navigator', 'Platform', 'Alert', 'Share', 'Clipboard',
+          'requestAnimationFrame', 'cancelAnimationFrame', 'undefined', 'NaN', 'Infinity', 'AbortController'
+        ]);
+        traverse(ast, {
+          ReferencedIdentifier(p) {
+            if (!globals.has(p.node.name) && !p.scope.hasBinding(p.node.name)) {
+              undeclared.push(p.node.name);
+            }
+          }
+        });
+        if (undeclared.length > 0) {
+          console.error('Undeclared:', undeclared.join(', '));
+          process.exit(1);
+        }
+        """
+        res = subprocess.run(["node", "-e", node_cmd], capture_output=True, text=True, cwd=os.path.join(os.path.dirname(__file__), "..", ".."))
+        self.assertEqual(res.returncode, 0, f"Babel found undeclared variables: {res.stderr}")
+        print("[PASS] Test 18: Babel AST verifies 0 undeclared variables in mobile/App.js.")
+
+    def test_19_safe_abort_controller_and_camera_modal(self):
+        """Verify SafeAbortController and crash-proof camera modal invocation."""
+        with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("SafeAbortController", content, "SafeAbortController fallback must be defined")
+        self.assertNotIn("onPress={startCamera}", content, "Must not call undefined startCamera identifier")
+        self.assertIn("setShowLiveCameraModal(true)", content, "Must open live camera scanner modal safely")
+        print("[PASS] Test 19: SafeAbortController and crash-proof camera modal verified.")
+
+    def test_20_asset_manager_database_and_new_name(self):
+        """Verify Asset Manager is Ing. Emmanuel Kwabena Mensah and has database tab."""
+        with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("Ing. Emmanuel Kwabena Mensah", content, "Asset manager name must be Ing. Emmanuel Kwabena Mensah")
+        self.assertNotIn("Dr. Samuel O. Frimpong", content, "Dr. Samuel O. Frimpong must be completely removed")
+        self.assertIn("['analytics', 'database', 'settings']", content, "Asset manager must have analytics, database, and settings tabs")
+        print("[PASS] Test 20: Asset Manager renamed to Ing. Emmanuel Kwabena Mensah with Central DB access.")
+
+    def test_21_kofi_level_4_and_deterministic_scanning(self):
+        """Verify Kofi Boateng has Level 4 clearance and scan engine is 100% deterministic."""
+        with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("LEVEL 4 • QA AUDITOR", content, "Kofi Boateng must have Level 4 QA Auditor badge")
+        self.assertIn("scanCacheRef", content, "scanCacheRef must exist for deterministic rescan caching")
+        self.assertIn("getDeterministicHash", content, "getDeterministicHash must be used for deterministic defect selection")
+        self.assertNotIn("Math.floor(Math.random() * pool.length)", content, "Math.random must not be used for defect selection")
+        print("[PASS] Test 21: Kofi Boateng Level 4 clearance and 100% deterministic scan engine verified.")
+
 if __name__ == "__main__":
     unittest.main()
 

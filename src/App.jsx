@@ -79,7 +79,7 @@ export default function App() {
     currentUser.clearance_level || (
       currentUser.role === "admin" ? 5 :
       currentUser.role === "asset_manager" ? 4 :
-      currentUser.role === "auditor" ? 3 :
+      currentUser.role === "auditor" ? 4 :
       currentUser.role === "drone_pilot" ? 2 : 1
     )
   ) : 0;
@@ -91,7 +91,7 @@ export default function App() {
       return currentUser.allowedTabs.includes(t.id);
     }
     if (currentUser.role === "technician") return ["scan", "work_orders"].includes(t.id);
-    if (currentUser.role === "asset_manager") return ["analytics"].includes(t.id);
+    if (currentUser.role === "asset_manager") return ["analytics", "database"].includes(t.id);
     if (currentUser.role === "drone_pilot") return ["scan", "drone"].includes(t.id);
     if (currentUser.role === "auditor" || currentUser.role === "admin") return true;
     return false;

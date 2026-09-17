@@ -1,6 +1,5 @@
-const CACHE_NAME = 'solarscan-cache-v2';
+const CACHE_NAME = 'solarscan-cache-v3';
 const ASSETS_TO_CACHE = [
-  '/',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'

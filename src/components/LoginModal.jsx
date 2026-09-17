@@ -48,9 +48,9 @@ export const PERSONAS = [
     full_name: "Kofi Boateng",
     email: "auditor@solarscan.ai",
     role: "auditor",
-    clearance_level: 3,
-    roleTitle: "QA & Warranty Auditor",
-    badge: "LEVEL 3 • AUDITOR",
+    clearance_level: 4,
+    roleTitle: "QA & Warranty Compliance Auditor",
+    badge: "LEVEL 4 • QA AUDITOR",
     badgeColor: "#8b5cf6",
     avatar: "KB",
     facility: "Clean Energy QA & Compliance Bureau",
@@ -60,19 +60,19 @@ export const PERSONAS = [
   },
   {
     id: "asset_manager",
-    name: "Dr. Samuel O. Frimpong",
-    full_name: "Dr. Samuel O. Frimpong",
+    name: "Ing. Emmanuel Kwabena Mensah",
+    full_name: "Ing. Emmanuel Kwabena Mensah",
     email: "manager@solarscan.ai",
     role: "asset_manager",
     clearance_level: 4,
-    roleTitle: "Solar Plant IT Asset Manager & Supervisor",
-    badge: "LEVEL 4 • SUPERVISOR",
+    roleTitle: "Solar Plant IT Asset Manager & Infrastructure Director",
+    badge: "LEVEL 4 • ASSET DIRECTOR",
     badgeColor: "#f59e0b",
-    avatar: "SF",
-    facility: "Department of ITDS, UENR",
-    description: "Supervisor oversight, fleet financial yield loss, central database management, AI retraining approval.",
+    avatar: "EM",
+    facility: "Directorate of Solar Plant Infrastructure & Assets, UENR",
+    description: "Fleet financial yield oversight, central database management, and maintenance governance.",
     defaultTab: "analytics",
-    allowedTabs: ["analytics"]
+    allowedTabs: ["analytics", "database"]
   }
 ];
 

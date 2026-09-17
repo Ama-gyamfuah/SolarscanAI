@@ -58,11 +58,11 @@ export default function Sidebar({
                 lineHeight: 1.2,
               }}
             >
-              SOLAR SCAN
+              SOLARSCAN AI
             </h1>
             <span
               style={{
-                fontSize: "12px",
+                fontSize: "11px",
                 color: "#38bdf8",
                 fontFamily: "var(--font-mono)",
                 textTransform: "uppercase",
@@ -70,7 +70,7 @@ export default function Sidebar({
                 fontWeight: 800
               }}
             >
-              AI Inspection System
+              ITDS • UENR
             </span>
           </div>
         )}
@@ -112,7 +112,7 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* Mobile App & QR Access Button */}
+      {/* Phone Browser (iOS / Android) Access Button */}
       {!collapsed && (
         <div
           id="btn-sidebar-mobile-deploy"
@@ -135,10 +135,10 @@ export default function Sidebar({
         >
           <span style={{ fontSize: "14px" }}>📱</span>
           <div style={{ flex: 1, color: "#38bdf8", fontWeight: 700, fontSize: "12px" }}>
-            Mobile App & QR
+            Phone Browser (iOS / Android)
           </div>
           <span style={{ fontSize: "10px", background: "rgba(56, 189, 248, 0.2)", padding: "2px 6px", borderRadius: "4px", color: "#38bdf8", fontWeight: 800 }}>
-            Wi-Fi / PWA
+            Wi-Fi / Hotspot
           </span>
         </div>
       )}
