@@ -1,0 +1,36 @@
+# Backend and Python
+backend/
+*.py
+*.pyc
+__pycache__/
+*.pt
+*.onnx
+*.tflite
+*.db
+*.sqlite
+
+# Mobile & Android
+mobile/
+android/
+ios/
+
+# Documentation and Word Docs
+*.docx
+*.doc
+*.pdf
+*.pptx
+documents/
+
+# Logs and scratch
+*.log
+scratch/
+scratch_diff.txt
+
+# Git and OS
+.git/
+.gitignore
+.github/
+.DS_Store
+
+# Node / dependencies
+node_modules/
