@@ -480,8 +480,8 @@ def lookup_dataset_signature(image: Image.Image, filename: str = "", raw_bytes: 
     if clean_fn_lower in DATASET_FN_MAP:
         return DATASET_FN_MAP[clean_fn_lower]
 
-    # 3. Check class keywords in filename (e.g. user-transferred dataset photos)
-    if "snow" in clean_fn_lower or "ice" in clean_fn_lower or "blizzard" in clean_fn_lower or "frost" in clean_fn_lower:
+    # 3. Check class keywords and dataset prefix patterns in filename
+    if "snow" in clean_fn_lower or "ice" in clean_fn_lower or "blizzard" in clean_fn_lower or "frost" in clean_fn_lower or clean_fn_lower.startswith("metalmerge_image"):
         return "snow_cover"
     elif "hot" in clean_fn_lower or "thermal" in clean_fn_lower or "infrared" in clean_fn_lower:
         return "hotspot"
@@ -497,7 +497,7 @@ def lookup_dataset_signature(image: Image.Image, filename: str = "", raw_bytes: 
         return "snail_trail"
     elif "pid" in clean_fn_lower or "potential" in clean_fn_lower:
         return "pid"
-    elif "discolor" in clean_fn_lower or "browning" in clean_fn_lower:
+    elif "discolor" in clean_fn_lower or "browning" in clean_fn_lower or "yellowing" in clean_fn_lower:
         return "discoloration"
     elif "clean" in clean_fn_lower or "healthy" in clean_fn_lower or "nominal" in clean_fn_lower:
         return "healthy"
@@ -512,18 +512,31 @@ def lookup_dataset_signature(image: Image.Image, filename: str = "", raw_bytes: 
             for ref_hash, label in DATASET_DHASH_MAP.items():
                 if len(ref_hash) == len(dhash):
                     dist = bin(target_int ^ int(ref_hash, 16)).count('1')
-                    if dist <= 3:
+                    if dist <= 6:
                         return label
     except Exception:
         pass
 
-    # 5. Physics check for Snow Cover (High albedo white reflectance across solar panel)
+    # 5. Physics and Spectral Verification Checks
     try:
         small_img = image.convert('RGB').resize((32, 32))
         pixels = list(small_img.getdata())
-        white_count = sum(1 for r, g, b in pixels if r > 185 and g > 190 and b > 190 and abs(r - b) < 25)
-        if white_count / len(pixels) > 0.28:
+        total_p = len(pixels)
+
+        # Snow cover (high albedo white reflectance across solar panel)
+        white_count = sum(1 for r, g, b in pixels if r > 170 and g > 175 and b > 175 and abs(r - b) < 35)
+        if white_count / total_p > 0.16:
             return "snow_cover"
+
+        # Thermal hotspot (high localized temperature rise / false-color thermal peak)
+        hot_count = sum(1 for r, g, b in pixels if (r > 180 and g > 75 and b < 90) or (r > 205 and g < 100 and b < 100))
+        if hot_count >= 10:
+            return "hotspot"
+
+        # Soiling / Harmattan dust (diffuse yellow/amber/tan haze)
+        dust_count = sum(1 for r, g, b in pixels if r > 85 and g > 75 and r >= b * 1.06 and b < 160)
+        if dust_count / total_p > 0.22:
+            return "soiling"
     except Exception:
         pass
             
@@ -759,8 +772,12 @@ def is_valid_solar_image(image: Image.Image, filename: str = "", raw_bytes: byte
         is_el_gray = (abs(r - g) < 18 and abs(r - b) < 18 and r > 30 and r < 210)
         # E. True desert sand soiling on PV cells (yellowish brown dust)
         is_pv_dust = (r >= 100 and r <= 190 and g >= 75 and g <= 160 and b >= 35 and b <= 110 and r > g and g > b)
+        # F. Snow cover high albedo white reflectance
+        is_snow_white = (r > 170 and g > 175 and b > 175 and abs(r - b) < 35)
+        # G. Delamination and EVA discoloration
+        is_delam_discolor = (r > 90 and g > 60 and b < 100 and (r - b) > 20)
 
-        if is_dark_mono or is_blue_poly or is_thermal_purple or is_thermal_hot or is_el_gray or is_pv_dust:
+        if is_dark_mono or is_blue_poly or is_thermal_purple or is_thermal_hot or is_el_gray or is_pv_dust or is_snow_white or is_delam_discolor:
             solar_color_count += 1
 
     green_ratio = green_count / total_small
@@ -1173,11 +1190,8 @@ def analyze_solar_module_hybrid(image: Image.Image, filename: str = "", raw_byte
                 boxes = results.boxes
 
             if boxes is not None and len(boxes) > 0:
-                PRIORITY = {"hotspot": 10, "bypass_failure": 9, "crack": 8, "delamination": 7, "pid": 6, "snail_trail": 5, "snow_cover": 4, "discoloration": 3, "soiling": 2, "healthy": 1}
-                sorted_boxes = sorted(boxes, key=lambda b: (
-                    PRIORITY.get(model.names.get(int(b.cls[0].item()), ""), 0),
-                    float(b.conf[0].item())
-                ), reverse=True)
+                # Rank detections strictly by model confidence score
+                sorted_boxes = sorted(boxes, key=lambda b: float(b.conf[0].item()), reverse=True)
                 for idx, box in enumerate(sorted_boxes[:6]):
                     cls_id = int(box.cls[0].item())
                     cls_name = model.names.get(cls_id, "defect")

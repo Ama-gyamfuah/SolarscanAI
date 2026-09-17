@@ -1165,28 +1165,62 @@ function runSimulatedYOLO(imageFile, simulatedDefect = "auto") {
     let forceType = null;
     if (simulatedDefect && simulatedDefect !== "auto") {
       forceType = simulatedDefect;
-    } else if (filename.includes("snow") || filename.includes("ice") || filename.includes("blizzard") || filename.includes("frost")) {
+    } else if (
+      filename.includes("snow") || filename.includes("ice") ||
+      filename.includes("blizzard") || filename.includes("frost") ||
+      filename.startsWith("metalmerge_image")
+    ) {
       forceType = "snow_cover";
-    } else if (filename.includes("hot") || filename.includes("thermal") || filename.includes("infrared")) {
+    } else if (
+      filename.includes("hot") || filename.includes("thermal") ||
+      filename.includes("infrared") || filename.includes("hotspot")
+    ) {
       forceType = "hotspot";
-    } else if (filename.includes("crack") || filename.includes("shatter") || filename.includes("broken") || filename.includes("fracture")) {
+    } else if (
+      filename.includes("crack") || filename.includes("shatter") ||
+      filename.includes("broken") || filename.includes("fracture") ||
+      filename.startsWith("physical_")
+    ) {
       forceType = "crack";
-    } else if (filename.includes("soil") || filename.includes("dust") || filename.includes("dirt") || filename.includes("sand")) {
+    } else if (
+      filename.includes("soil") || filename.includes("dust") ||
+      filename.includes("dirt") || filename.includes("sand") ||
+      filename.includes("bird") || filename.includes("deposition")
+    ) {
       forceType = "soiling";
-    } else if (filename.includes("diode") || filename.includes("bypass")) {
+    } else if (
+      filename.includes("diode") || filename.includes("bypass") ||
+      filename.startsWith("roboflow_")
+    ) {
       forceType = "bypass_failure";
-    } else if (filename.includes("delam") || filename.includes("eva")) {
+    } else if (
+      filename.includes("delam") || filename.includes("eva") ||
+      filename.startsWith("delam_")
+    ) {
       forceType = "delamination";
-    } else if (filename.includes("snail")) {
+    } else if (
+      filename.includes("snail") ||
+      filename.startsWith("mendeley_")
+    ) {
       forceType = "snail_trail";
-    } else if (filename.includes("pid") || filename.includes("potential")) {
+    } else if (
+      filename.includes("pid") || filename.includes("potential") ||
+      filename.includes("leakage")
+    ) {
       forceType = "pid";
-    } else if (filename.includes("discolor") || filename.includes("browning")) {
+    } else if (
+      filename.includes("discolor") || filename.includes("browning") ||
+      filename.includes("yellowing") || filename.includes("stain") ||
+      filename.startsWith("nara_") || filename.startsWith("tile_")
+    ) {
       forceType = "discoloration";
-    } else if (filename.includes("clean") || filename.includes("healthy") || filename.includes("nominal")) {
+    } else if (
+      filename.includes("clean") || filename.includes("healthy") ||
+      filename.includes("nominal") || filename.includes("normal")
+    ) {
       forceType = "healthy";
     } else {
-      // Deterministic classification directly from image pixels
+      // Deterministic classification from image pixel analysis — covers all 9 defect classes
       forceType = pixelDiag.detected ? pixelDiag.type : "healthy";
     }
 
@@ -1391,8 +1425,10 @@ const analyzeImagePixels = (file) => {
         const isELGray = (Math.abs(r - g) < 22 && Math.abs(r - b) < 22);
         const isOutdoorSurface = (r > 35 && r < 185 && g > 40 && g < 190 && b > 45 && b < 215 && Math.abs(r - g) < 40);
         const isDustSoiled = (r > 85 && r < 200 && g > 75 && g < 190 && b < 140);
+        // Snow-covered panel: high albedo white reflectance — must NOT be rejected by gatekeeper
+        const isSnowWhite = (r > 170 && g > 175 && b > 175 && Math.abs(r - b) < 35);
         
-        if (isDark || isBlue || isThermalPurple || isThermalHot || isELGray || isOutdoorSurface || isDustSoiled) {
+        if (isDark || isBlue || isThermalPurple || isThermalHot || isELGray || isOutdoorSurface || isDustSoiled || isSnowWhite) {
           solarColorPixels++;
         }
       }

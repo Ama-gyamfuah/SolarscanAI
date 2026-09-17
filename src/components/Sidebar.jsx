@@ -12,8 +12,7 @@ export default function Sidebar({
   currentUser,
   userLevel = 0,
   onLogout,
-  onOpenLoginModal,
-  onOpenMobileModal
+  onOpenLoginModal
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -112,36 +111,6 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* Phone Browser (iOS / Android) Access Button */}
-      {!collapsed && (
-        <div
-          id="btn-sidebar-mobile-deploy"
-          onClick={onOpenMobileModal}
-          style={{
-            padding: "9px 14px",
-            margin: "0 14px 6px 14px",
-            borderRadius: "10px",
-            background: "rgba(2, 132, 199, 0.12)",
-            border: "1.5px solid rgba(56, 189, 248, 0.35)",
-            fontSize: "12.5px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            cursor: "pointer",
-            transition: "all 0.2s",
-          }}
-          title="Connect mobile phone or view deployment links"
-          className="animate-fade-in"
-        >
-          <span style={{ fontSize: "14px" }}>📱</span>
-          <div style={{ flex: 1, color: "#38bdf8", fontWeight: 700, fontSize: "12px" }}>
-            Phone Browser (iOS / Android)
-          </div>
-          <span style={{ fontSize: "10px", background: "rgba(56, 189, 248, 0.2)", padding: "2px 6px", borderRadius: "4px", color: "#38bdf8", fontWeight: 800 }}>
-            Wi-Fi / Hotspot
-          </span>
-        </div>
-      )}
 
       {/* Nav List */}
       <nav

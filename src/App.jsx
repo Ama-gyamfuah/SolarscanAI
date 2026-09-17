@@ -7,7 +7,6 @@ import Analytics from "./components/Analytics";
 import EvidenceHub from "./components/EvidenceHub";
 import DatabaseManager from "./components/DatabaseManager";
 import LoginModal, { PERSONAS } from "./components/LoginModal";
-import MobileDeployModal from "./components/MobileDeployModal";
 import {
   ScanIcon,
   LayersIcon,
@@ -63,7 +62,6 @@ export default function App() {
     }
   });
   const [loginModalTab, setLoginModalTab] = useState("signin");
-  const [showMobileDeployModal, setShowMobileDeployModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const [activeTab, setActiveTab] = useState(() => {
@@ -524,7 +522,6 @@ export default function App() {
             setTempApiKey(apiKey);
             setShowApiModal(true);
           }}
-          onOpenMobileModal={() => setShowMobileDeployModal(true)}
         />
       )}
 
@@ -1288,12 +1285,6 @@ export default function App() {
         onClose={() => setShowLoginModal(false)}
         onLoginSuccess={handleLoginSuccess}
         initialTab={loginModalTab}
-      />
-
-      {/* Mobile & Multi-Device Deployment Modal */}
-      <MobileDeployModal
-        isOpen={showMobileDeployModal}
-        onClose={() => setShowMobileDeployModal(false)}
       />
 
       {/* Sign Out Confirmation Prompt Modal */}

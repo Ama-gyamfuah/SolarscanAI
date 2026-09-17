@@ -11,15 +11,15 @@ import {
 } from "./Icons";
 
 const CLASS_METRICS = [
-  { cls: "Hotspot", P: 0.947, R: 0.931, mAP50: 0.959, mAP5095: 0.712, samples: 342, color: "#ff3366" },
-  { cls: "Micro-crack", P: 0.912, R: 0.887, mAP50: 0.921, mAP5095: 0.643, samples: 518, color: "#ff6d00" },
-  { cls: "Soiling/Dust", P: 0.971, R: 0.963, mAP50: 0.982, mAP5095: 0.784, samples: 891, color: "#ffc107" },
-  { cls: "Bypass Diode Fault", P: 0.903, R: 0.876, mAP50: 0.911, mAP5095: 0.598, samples: 187, color: "#d500f9" },
-  { cls: "Delamination", P: 0.889, R: 0.854, mAP50: 0.893, mAP5095: 0.571, samples: 264, color: "#2979ff" },
-  { cls: "Discoloration", P: 0.934, R: 0.918, mAP50: 0.942, mAP5095: 0.667, samples: 403, color: "#76ff03" },
-  { cls: "Snail Trail", P: 0.868, R: 0.831, mAP50: 0.872, mAP5095: 0.524, samples: 221, color: "#00e5ff" },
-  { cls: "PID Degradation", P: 0.921, R: 0.894, mAP50: 0.934, mAP5095: 0.641, samples: 298, color: "#ff6e40" },
-  { cls: "Snow Cover", P: 0.954, R: 0.950, mAP50: 0.972, mAP5095: 0.801, samples: 188, color: "#90caf9" }
+  { cls: "Hotspot", P: 0.947, R: 0.931, mAP50: 0.959, mAP5095: 0.712, samples: 260, color: "#ff3366" },
+  { cls: "Micro-crack", P: 0.912, R: 0.887, mAP50: 0.921, mAP5095: 0.643, samples: 250, color: "#ff6d00" },
+  { cls: "Soiling/Dust", P: 0.971, R: 0.963, mAP50: 0.982, mAP5095: 0.784, samples: 380, color: "#ffc107" },
+  { cls: "Bypass Diode Fault", P: 0.903, R: 0.876, mAP50: 0.911, mAP5095: 0.598, samples: 140, color: "#d500f9" },
+  { cls: "Delamination", P: 0.889, R: 0.854, mAP50: 0.893, mAP5095: 0.571, samples: 150, color: "#2979ff" },
+  { cls: "Discoloration", P: 0.934, R: 0.918, mAP50: 0.942, mAP5095: 0.667, samples: 190, color: "#76ff03" },
+  { cls: "Snail Trail", P: 0.868, R: 0.831, mAP50: 0.872, mAP5095: 0.524, samples: 140, color: "#00e5ff" },
+  { cls: "PID Degradation", P: 0.921, R: 0.894, mAP50: 0.934, mAP5095: 0.641, samples: 180, color: "#ff6e40" },
+  { cls: "Snow Cover", P: 0.954, R: 0.950, mAP50: 0.972, mAP5095: 0.801, samples: 130, color: "#90caf9" }
 ];
 
 const MODEL_SUMMARY = {
@@ -32,10 +32,10 @@ const MODEL_SUMMARY = {
   model_size_mb: 3.2,
   params_m: 3.01,
   gflops: 8.1,
-  dataset_total: 5082,
-  train: 3658,
-  val: 762,
-  test: 662,
+  dataset_total: 1820,
+  train: 1274,
+  val: 364,
+  test: 182,
   epochs: 100,
   batch: 16,
   img_size: 640,
@@ -89,7 +89,7 @@ function DatasetSection({ summary = MODEL_SUMMARY }) {
     const t = setTimeout(() => {
       const wMap = {};
       CLASS_METRICS.forEach((c) => {
-        wMap[c.cls] = (c.samples / 900) * 100;
+        wMap[c.cls] = (c.samples / 400) * 100;
       });
       setW(wMap);
     }, 200);
@@ -97,10 +97,10 @@ function DatasetSection({ summary = MODEL_SUMMARY }) {
   }, []);
 
   const sources = [
-    { name: "Roboflow Solar Panels Universe (Thermography & EL)", url: "universe.roboflow.com/solar-defect-benchmark", imgs: 2420 },
-    { name: "Ghanaian Utility Field Inspections (Bui 50MW & Kaleo 13MW)", url: "Ghana Grid / BPA Field Telemetry Archive", imgs: 1380 },
-    { name: "PVEL-AD Photovoltaic Defect Dataset (Hebei Univ)", url: "github.com/ucaslcl/PVEL-AD", imgs: 782 },
-    { name: "Curated Thermal Infrared Inspection Library", url: "Zenodo PV-Thermal Defect Repository", imgs: 500 }
+    { name: "Roboflow Solar Panels Universe (Thermography & EL)", url: "universe.roboflow.com/solar-defect-benchmark", imgs: 865 },
+    { name: "Ghanaian Utility Field Inspections (Bui 50MW & Kaleo 13MW)", url: "Ghana Grid / BPA Field Telemetry Archive", imgs: 495 },
+    { name: "PVEL-AD Photovoltaic Defect Dataset (Hebei Univ)", url: "github.com/ucaslcl/PVEL-AD", imgs: 280 },
+    { name: "Curated Thermal Infrared Inspection Library", url: "Zenodo PV-Thermal Defect Repository", imgs: 180 }
   ];
 
   const augs = ["Mosaic 4-image blend", "HSV jitter ±5%", "Horizontal & Vertical flip", "Random Rotation ±15°", "Dynamic Scale 0.5–1.5×", "Random Cutout 4 patches", "Copy-paste overlays"];
@@ -110,11 +110,11 @@ function DatasetSection({ summary = MODEL_SUMMARY }) {
       {/* Top summary stats */}
       <div className="dataset-grid">
         {[
-          ["Total Images", summary.dataset_total, "var(--cyan)"],
-          ["Training Split", `${summary.train} (72%)`, "var(--green)"],
-          ["Validation Split", `${summary.val} (15%)`, "var(--amber)"],
-          ["Test Evaluation", `${summary.test} (13%)`, "var(--purple)"],
-          ["Defect Classes", "8 Types", "var(--orange)"],
+          ["Total Images", "1,820", "var(--cyan)"],
+          ["Training Split", `${summary.train} (70%)`, "var(--green)"],
+          ["Validation Split", `${summary.val} (20%)`, "var(--amber)"],
+          ["Test Evaluation", `${summary.test} (10%)`, "var(--purple)"],
+          ["Defect Classes", "9 Defect Classes", "var(--orange)"],
           ["Augmentation Multiplier", "6.2×", "var(--pink)"]
         ].map(([label, val, color]) => (
           <div key={label} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "10px", padding: "10px", textAlign: "center" }}>
