@@ -22,9 +22,12 @@ import Chatbot from "./components/Chatbot";
 
 const ALL_TABS = [
   { id: "scan", label: "Scan Lab", icon: (color, size) => <ScanIcon color={color} size={size} /> },
+  { id: "farms", label: "Solar Farms", icon: (color, size) => <LayersIcon color={color} size={size} /> },
+  { id: "alerts", label: "SMS & Alerts", icon: (color, size) => <EvidenceIcon color={color} size={size} /> },
+  { id: "work_orders", label: "Work Orders", icon: (color, size) => <DatabaseIcon color={color} size={size} /> },
   { id: "drone", label: "Drone GIS", icon: (color, size) => <LayersIcon color={color} size={size} /> },
   { id: "analytics", label: "Analytics", icon: (color, size) => <AnalyticsIcon color={color} size={size} /> },
-  { id: "database", label: "DB & Retrain", icon: (color, size) => <DatabaseIcon color={color} size={size} /> },
+  { id: "database", label: "Central DB", icon: (color, size) => <DatabaseIcon color={color} size={size} /> },
   { id: "evidence", label: "Evidence Hub", icon: (color, size) => <EvidenceIcon color={color} size={size} /> }
 ];
 
@@ -39,14 +42,26 @@ export const TAB_CLEARANCE = {
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
+      const sessionActive = sessionStorage.getItem("solarscan_session_active");
+      if (!sessionActive) return null; // App ALWAYS starts with Sign In & Join page for fresh sessions!
       const stored = localStorage.getItem("solarscan_auth_user");
-      if (stored) return JSON.parse(stored);
-      return PERSONAS[0]; // Default to Kwame Mensah (Field Solar Technician)
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u && u.email) return u;
+      }
+      return null;
     } catch (_) {
-      return PERSONAS[0];
+      return null;
     }
   });
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(() => {
+    try {
+      const sessionActive = sessionStorage.getItem("solarscan_session_active");
+      return !sessionActive; // Must display Sign In / Join modal on app startup
+    } catch (_) {
+      return true;
+    }
+  });
   const [loginModalTab, setLoginModalTab] = useState("signin");
   const [showMobileDeployModal, setShowMobileDeployModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -69,21 +84,32 @@ export default function App() {
     )
   ) : 0;
 
-  // Filter accessible tabs dynamically based on user role and clearance level
+  // Strict Role-Based Access Control (RBAC) filtering
   const visibleTabs = ALL_TABS.filter((t) => {
-    if (!currentUser) return true;
-    if (t.id === "scan") return userLevel >= 1;
-    if (t.id === "drone") return userLevel >= 2;
-    if (t.id === "evidence") return userLevel >= 3;
-    if (t.id === "analytics") return userLevel >= 4;
-    if (t.id === "database") return userLevel >= 3; // Auditors can inspect DB evidence
-    return true;
+    if (!currentUser) return false;
+    if (currentUser.allowedTabs && Array.isArray(currentUser.allowedTabs)) {
+      return currentUser.allowedTabs.includes(t.id);
+    }
+    if (currentUser.role === "technician") return ["scan", "work_orders"].includes(t.id);
+    if (currentUser.role === "asset_manager") return ["analytics"].includes(t.id);
+    if (currentUser.role === "drone_pilot") return ["scan", "drone"].includes(t.id);
+    if (currentUser.role === "auditor" || currentUser.role === "admin") return true;
+    return false;
   });
+
+  // Automatically reset active tab if current role does not have permission for it
+  useEffect(() => {
+    if (currentUser && visibleTabs.length > 0 && !visibleTabs.some((t) => t.id === activeTab)) {
+      setActiveTab(visibleTabs[0].id);
+    }
+  }, [currentUser, visibleTabs, activeTab]);
 
   // Verify session on mount
   useEffect(() => {
     const verifyToken = async () => {
       try {
+        const sessionActive = sessionStorage.getItem("solarscan_session_active");
+        if (!sessionActive) return; // Do not auto-authenticate if session not yet initiated
         const token = localStorage.getItem("solarscan_auth_token");
         if (!token) return;
         const res = await fetch("/api/auth/me", {
@@ -112,6 +138,7 @@ export default function App() {
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
     try {
+      sessionStorage.setItem("solarscan_session_active", "true");
       localStorage.setItem("solarscan_auth_user", JSON.stringify(user));
     } catch (_) {}
     setShowLoginModal(false);
@@ -140,10 +167,12 @@ export default function App() {
       }
     } catch (_) {}
     try {
+      sessionStorage.removeItem("solarscan_session_active");
       localStorage.removeItem("solarscan_auth_user");
       localStorage.removeItem("solarscan_auth_token");
     } catch (_) {}
     setCurrentUser(null);
+    setShowLoginModal(true);
   };
   const [apiKey, setApiKey] = useState(() => {
     try {
@@ -327,16 +356,37 @@ export default function App() {
                     lineHeight: 1.2,
                   }}
                 >
-                  SOLAR SCAN
+                  SOLARSCAN AI
                 </h1>
-                <span style={{ fontSize: "8px", color: "#38bdf8", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 700 }}>
-                  Edge-AI DSS Console
+                <span style={{ fontSize: "8px", color: "#38bdf8", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 800 }}>
+                  ITDS Console • UENR
                 </span>
               </div>
             </div>
 
             {/* Right Controls: Theme Toggle, REST API Sandbox & API Connection Indicator */}
             <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              {/* Central SQLite vs On-Device Local DB Status Badge */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "rgba(16, 185, 129, 0.15)",
+                  border: "1px solid rgba(16, 185, 129, 0.4)",
+                  borderRadius: "6px",
+                  padding: "4px 8px",
+                  fontSize: "9px",
+                  fontFamily: "var(--font-mono)",
+                  fontWeight: 800,
+                  color: "#86efac"
+                }}
+                title="Central SQLite Persistent Store (backend/solarscan.db) with Offline On-Device Cache Active"
+              >
+                <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
+                <span>CENTRAL SQLITE DB</span>
+              </div>
+
               <button
                 onClick={toggleTheme}
                 style={{
@@ -797,6 +847,15 @@ export default function App() {
               {activeTab === "scan" && (
                 <ScanLab onSaveScan={handleSaveScan} apiKey={apiKey} setApiKey={handleSaveApiKey} currentUser={currentUser} />
               )}
+              {activeTab === "farms" && (
+                <DatabaseManager currentUser={currentUser} initialSubTab="farms" />
+              )}
+              {activeTab === "alerts" && (
+                <DatabaseManager currentUser={currentUser} initialSubTab="notifications" />
+              )}
+              {activeTab === "work_orders" && (
+                <DatabaseManager currentUser={currentUser} initialSubTab="work_orders" />
+              )}
               {activeTab === "drone" && (
                 <DroneMap />
               )}
@@ -804,7 +863,7 @@ export default function App() {
                 <Analytics history={history} />
               )}
               {activeTab === "database" && (
-                <DatabaseManager currentUser={currentUser} />
+                <DatabaseManager currentUser={currentUser} initialSubTab="feedback" />
               )}
               {activeTab === "evidence" && (
                 <EvidenceHub />

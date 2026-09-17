@@ -83,7 +83,8 @@ export const PERSONAS = [
     avatar: "KM",
     facility: "UENR Sunyani Solar Station #1",
     description: "Single panel triage, live hardware diagnostics, assigned repair work-orders.",
-    defaultTab: "scan"
+    defaultTab: "scan",
+    allowedTabs: ["scan", "orders", "settings"]
   },
   {
     id: "drone_pilot",
@@ -98,7 +99,8 @@ export const PERSONAS = [
     avatar: "AO",
     facility: "West African Drone Survey Unit",
     description: "Multi-panel batch ingestion, GPS drone flight grid, aerial thermal mapping.",
-    defaultTab: "drone"
+    defaultTab: "scan",
+    allowedTabs: ["scan", "drone", "settings"]
   },
   {
     id: "auditor",
@@ -113,7 +115,8 @@ export const PERSONAS = [
     avatar: "KB",
     facility: "Clean Energy QA & Compliance Bureau",
     description: "Cryptographic SHA-256 audit trail, confusion matrix, retraining dataset export.",
-    defaultTab: "evidence"
+    defaultTab: "evidence",
+    allowedTabs: ["scan", "farms", "alerts", "orders", "drone", "analytics", "database", "evidence", "settings"]
   },
   {
     id: "asset_manager",
@@ -128,7 +131,8 @@ export const PERSONAS = [
     avatar: "SF",
     facility: "Department of ITDS, UENR",
     description: "Supervisor oversight, fleet financial yield loss, central database management.",
-    defaultTab: "analytics"
+    defaultTab: "analytics",
+    allowedTabs: ["analytics", "settings"]
   }
 ];
 
@@ -502,7 +506,7 @@ export default function App() {
   };
 
   // Authentication & RBAC State
-  const [currentUser, setCurrentUser] = useState(PERSONAS[0]); // Kwame Mensah
+  const [currentUser, setCurrentUser] = useState(null); // Guest Session by Default on App Launch!
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup' | 'forgot'
   const [authEmail, setAuthEmail] = useState('');
@@ -682,8 +686,19 @@ export default function App() {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        const filename = result.assets[0].fileName || 'solar_panel.jpg';
+        const asset = result.assets[0];
+        const uri = asset.uri;
+        const filename = asset.fileName || 'solar_panel.jpg';
+
+        // 5MB Maximum File Size Guard
+        if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+          Alert.alert(
+            "⚠️ File Size Limit Exceeded (5MB)",
+            `The selected image is ${(asset.fileSize / (1024 * 1024)).toFixed(1)}MB. For fast on-device single scanning and memory stability, please upload a photo under 5MB.`,
+            [{ text: "Choose Smaller Image", style: "default" }]
+          );
+          return;
+        }
 
         // Run Layer 1 Gatekeeper Validation Check
         const gatekeeper = checkGatekeeperValidation(filename);
@@ -1259,6 +1274,30 @@ export default function App() {
     setCopilotQuery('');
   };
 
+  // Handle Session Sign Out
+  const handleSignOut = () => {
+    Alert.alert(
+      "Confirm Session Sign Out",
+      `Are you sure you want to sign out, ${currentUser?.full_name || 'Operator'}? You will be returned to the Guest Session.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "🚪 Yes, Sign Out",
+          style: "destructive",
+          onPress: () => {
+            setCurrentUser(null);
+            setActiveTab('scan');
+            setAuthEmail('');
+            setAuthPassword('');
+            setShowAuthPassword(false);
+            setAuthModalVisible(false);
+            Alert.alert("Signed Out", "You have successfully signed out and returned to the Guest Session.");
+          }
+        }
+      ]
+    );
+  };
+
   // Handle Authentication Submission
   const handleAuthSubmit = () => {
     if (!authEmail.trim() || !authPassword.trim()) {
@@ -1269,8 +1308,15 @@ export default function App() {
     if (matched) {
       setCurrentUser(matched);
       setAuthModalVisible(false);
+      if (matched.defaultTab) setActiveTab(matched.defaultTab);
       Alert.alert("Welcome Back!", `Signed in as ${matched.full_name} (${matched.roleTitle}).`);
     } else {
+      const roleAllowedTabs = 
+        authRole === 'asset_manager' ? ['analytics', 'settings'] :
+        authRole === 'auditor' ? ['scan', 'farms', 'alerts', 'orders', 'drone', 'analytics', 'database', 'evidence', 'settings'] :
+        authRole === 'drone_pilot' ? ['scan', 'drone', 'settings'] :
+        ['scan', 'orders', 'settings'];
+
       const newUser = {
         id: `user_${Date.now()}`,
         name: authFullName.trim() || authEmail.split('@')[0],
@@ -1280,14 +1326,17 @@ export default function App() {
         clearance_level: authRole === 'asset_manager' ? 4 : authRole === 'auditor' ? 3 : authRole === 'drone_pilot' ? 2 : 1,
         roleTitle: authRole === 'asset_manager' ? "Solar Plant IT Asset Manager" : authRole === 'auditor' ? "QA & Warranty Auditor" : authRole === 'drone_pilot' ? "Drone Inspection Pilot" : "Field Solar Technician",
         badge: `LEVEL ${authRole === 'asset_manager' ? 4 : authRole === 'auditor' ? 3 : authRole === 'drone_pilot' ? 2 : 1} • AUTHENTICATED`,
-        badgeColor: theme.accent,
+        badgeColor: authRole === 'technician' ? '#10b981' : authRole === 'drone_pilot' ? '#0284c7' : authRole === 'auditor' ? '#8b5cf6' : '#f59e0b',
         avatar: (authFullName.trim() || "User").slice(0, 2).toUpperCase(),
-        facility: "UENR Solar Station #1",
-        description: "Authenticated field personnel."
+        facility: "UENR Sunyani Solar Station #1",
+        description: "Authenticated field personnel.",
+        allowedTabs: roleAllowedTabs,
+        defaultTab: roleAllowedTabs[0]
       };
       setCurrentUser(newUser);
       setAuthModalVisible(false);
-      Alert.alert("Account Active", `Signed in as ${newUser.full_name} (${newUser.roleTitle}).`);
+      setActiveTab(newUser.defaultTab);
+      Alert.alert("Account Created & Active", `Signed in as ${newUser.full_name} (${newUser.roleTitle}).`);
     }
   };
 
@@ -1319,9 +1368,15 @@ export default function App() {
   };
 
   const handleQuickPersona = (persona) => {
-    setCurrentUser(persona);
-    setAuthModalVisible(false);
-    if (persona.defaultTab) setActiveTab(persona.defaultTab);
+    setAuthEmail(persona.email);
+    setAuthPassword('solarscan2025!');
+    setAuthRole(persona.role);
+    setAuthFullName(persona.name);
+    setAuthMode('signin');
+    Alert.alert(
+      "Credentials Loaded",
+      `Pre-filled credentials for ${persona.name} (${persona.roleTitle}).\n\nTap the 👁️ eye icon to inspect password, then tap 'Sign In' to authenticate.`
+    );
   };
 
   // Required clearance check
@@ -1355,66 +1410,385 @@ export default function App() {
           {/* User Persona & Clearance Badge */}
           <TouchableOpacity
             style={[styles.userBadgeBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-            onPress={() => setAuthModalVisible(true)}
+            onPress={() => { setAuthMode('signin'); setAuthModalVisible(true); }}
           >
-            <View style={[styles.avatarCircle, { backgroundColor: currentUser?.badgeColor || theme.accent }]}>
-              <Text style={styles.avatarText}>{currentUser?.avatar || 'KM'}</Text>
+            <View style={[styles.avatarCircle, { backgroundColor: currentUser ? (currentUser.badgeColor || theme.accent) : '#64748b' }]}>
+              <Text style={styles.avatarText}>{currentUser ? (currentUser.avatar || 'OP') : '🔒'}</Text>
             </View>
             <View style={styles.userBadgeTexts}>
               <Text style={[styles.userNameHeader, { color: theme.textPrimary }]} numberOfLines={1}>
-                {currentUser?.name || 'Kwame Mensah'}
+                {currentUser ? (currentUser.name || currentUser.full_name) : 'Guest Session'}
               </Text>
-              <Text style={[styles.userClearanceText, { color: currentUser?.badgeColor || theme.accent }]}>
-                L{userLevel} • {currentUser?.role?.toUpperCase()}
+              <Text style={[styles.userClearanceText, { color: currentUser ? (currentUser.badgeColor || theme.accent) : '#f59e0b' }]}>
+                {currentUser ? `L${userLevel} • ${currentUser.role?.toUpperCase()}` : 'SIGN IN REQUIRED'}
               </Text>
             </View>
           </TouchableOpacity>
+
+          {/* Sign Out Header Button (Only shown when user is authenticated) */}
+          {currentUser && (
+            <TouchableOpacity
+              style={[styles.signOutHeaderBtn, { backgroundColor: theme.surface, borderColor: 'rgba(239, 68, 68, 0.4)' }]}
+              onPress={handleSignOut}
+              accessibilityLabel="Sign Out"
+            >
+              <Text style={{ fontSize: 13 }}>🚪</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      {/* 2. Top Horizontal Scrolling Module Bar */}
-      <View style={[styles.tabBarWrapper, { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabBarScroll}
-        >
-          {ALL_TABS.map((tab) => {
-            const isActive = activeTab === tab.id;
-            const isLocked = userLevel < tab.level;
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                style={[
-                  styles.tabPill,
-                  { backgroundColor: theme.surface, borderColor: theme.border },
-                  isActive && { backgroundColor: theme.accent, borderColor: theme.accent },
-                  isLocked && styles.tabPillLocked
-                ]}
-                onPress={() => setActiveTab(tab.id)}
-              >
-                <Text style={styles.tabPillIcon}>{tab.icon}</Text>
-                <Text
+      {/* 2. Top Horizontal Scrolling Module Bar (Strict RBAC - Only visible for authenticated users) */}
+      {currentUser && visibleTabs.length > 0 && (
+        <View style={[styles.tabBarWrapper, { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabBarScroll}
+          >
+            {visibleTabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
                   style={[
-                    styles.tabPillLabel,
-                    { color: theme.textSecondary },
-                    isActive && { color: theme.accentText, fontWeight: 'bold' }
+                    styles.tabPill,
+                    { backgroundColor: theme.surface, borderColor: theme.border },
+                    isActive && { backgroundColor: theme.accent, borderColor: theme.accent }
                   ]}
+                  onPress={() => setActiveTab(tab.id)}
                 >
-                  {tab.label}
-                </Text>
-                {isLocked && <Text style={styles.lockIcon}>🔒</Text>}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+                  <Text style={styles.tabPillIcon}>{tab.icon}</Text>
+                  <Text
+                    style={[
+                      styles.tabPillLabel,
+                      { color: theme.textSecondary },
+                      isActive && { color: theme.accentText, fontWeight: 'bold' }
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {/* 3. Main Screen Viewport */}
       <View style={styles.contentBody}>
 
-        {/* Clearance Guard if User Level is Insufficient */}
-        {isTabBlocked ? (
+        {/* GUEST DEFAULT VIEW: Enterprise Authentication & Account Creation Portal */}
+        {!currentUser ? (
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <View style={[styles.guestHeroCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+              <View style={[styles.guestLockCircle, { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: '#f59e0b' }]}>
+                <Text style={{ fontSize: 36 }}>🔒</Text>
+              </View>
+              <Text style={[styles.guestHeroTitle, { color: theme.textPrimary }]}>
+                Enterprise Authentication Required
+              </Text>
+              <Text style={[styles.guestHeroDesc, { color: theme.textSecondary }]}>
+                SolarScan AI enforces strict role-based access control (RBAC), cryptographic SHA-256 evidence logging, and persistent SQLite database verification. Sign in, register, or reset credentials to launch inspection tools.
+              </Text>
+
+              {/* Guest Auth Mode Switcher */}
+              <View style={[styles.authTabs, { borderBottomColor: theme.border }]}>
+                <TouchableOpacity
+                  style={[styles.authTab, authMode === 'signin' && [styles.authTabActive, { borderBottomColor: theme.accent }]]}
+                  onPress={() => { setAuthMode('signin'); setResetStep(1); }}
+                >
+                  <Text style={[styles.authTabText, { color: theme.textMuted }, authMode === 'signin' && { color: theme.accent, fontWeight: 'bold' }]}>
+                    🔑 Sign In
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.authTab, authMode === 'signup' && [styles.authTabActive, { borderBottomColor: theme.accent }]]}
+                  onPress={() => { setAuthMode('signup'); setResetStep(1); }}
+                >
+                  <Text style={[styles.authTabText, { color: theme.textMuted }, authMode === 'signup' && { color: theme.accent, fontWeight: 'bold' }]}>
+                    ➕ Join / Register
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.authTab, authMode === 'forgot' && [styles.authTabActive, { borderBottomColor: theme.accent }]]}
+                  onPress={() => setAuthMode('forgot')}
+                >
+                  <Text style={[styles.authTabText, { color: theme.textMuted }, authMode === 'forgot' && { color: theme.accent, fontWeight: 'bold' }]}>
+                    🔒 Reset Password
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Form Content */}
+              {authMode === 'signup' ? (
+                <View style={styles.guestFormContainer}>
+                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Full Name:</Text>
+                  <TextInput
+                    style={[styles.textInput, { backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.surfaceAlt }]}
+                    placeholder="e.g. Kwame Mensah"
+                    placeholderTextColor={theme.textMuted}
+                    value={authFullName}
+                    onChangeText={setAuthFullName}
+                  />
+
+                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Enterprise Email:</Text>
+                  <TextInput
+                    style={[styles.textInput, { backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.surfaceAlt }]}
+                    placeholder="e.g. tech@solarscan.ai"
+                    placeholderTextColor={theme.textMuted}
+                    value={authEmail}
+                    onChangeText={setAuthEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+
+                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Select Your Operational Role (Mandatory RBAC):</Text>
+                  <View style={styles.roleSelectionGrid}>
+                    {[
+                      { role: 'technician', title: 'Field Solar Technician', desc: 'Scan Labs (Single & Batch), Work Orders', icon: '👷', color: '#10b981' },
+                      { role: 'asset_manager', title: 'Plant IT Asset Manager', desc: 'Fleet Analytics, Financial Loss (GH₵), PDFs', icon: '👔', color: '#f59e0b' },
+                      { role: 'drone_pilot', title: 'Drone Inspection Pilot', desc: 'Scan Labs, Autonomous Flight GIS, Telemetry HUD', icon: '🚁', color: '#0284c7' },
+                      { role: 'auditor', title: 'QA & Warranty Auditor', desc: 'Full System Access, Evidence Hub, Audit Logs', icon: '📋', color: '#8b5cf6' }
+                    ].map((r) => (
+                      <TouchableOpacity
+                        key={r.role}
+                        style={[
+                          styles.roleSelectCard,
+                          { backgroundColor: theme.surface, borderColor: theme.border },
+                          authRole === r.role && { borderColor: r.color, backgroundColor: 'rgba(0, 229, 255, 0.08)' }
+                        ]}
+                        onPress={() => setAuthRole(r.role)}
+                      >
+                        <Text style={{ fontSize: 20 }}>{r.icon}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.roleSelectTitle, { color: authRole === r.role ? r.color : theme.textPrimary }]}>
+                            {r.title}
+                          </Text>
+                          <Text style={[styles.roleSelectDesc, { color: theme.textMuted }]}>
+                            {r.desc}
+                          </Text>
+                        </View>
+                        {authRole === r.role && (
+                          <Text style={{ color: r.color, fontWeight: 'bold' }}>✓</Text>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Password:</Text>
+                  <View style={[styles.passwordInputContainer, { backgroundColor: theme.surface, borderColor: theme.surfaceAlt }]}>
+                    <TextInput
+                      style={[styles.passwordTextInput, { color: theme.textPrimary }]}
+                      placeholder="Set password (min 6 chars)"
+                      placeholderTextColor={theme.textMuted}
+                      secureTextEntry={!showAuthPassword}
+                      value={authPassword}
+                      onChangeText={setAuthPassword}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeBtn}
+                      onPress={() => setShowAuthPassword(!showAuthPassword)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Text style={styles.eyeIconText}>{showAuthPassword ? '👁️' : '🙈'}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.submitAuthBtn, { backgroundColor: theme.accent, marginTop: 14 }]}
+                    onPress={handleAuthSubmit}
+                  >
+                    <Text style={[styles.submitAuthBtnText, { color: theme.accentText }]}>
+                      ➕ Create Enterprise Account & Launch
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{ alignSelf: 'center', marginTop: 12 }}
+                    onPress={() => setAuthMode('signin')}
+                  >
+                    <Text style={{ fontSize: 11, color: theme.accent }}>
+                      Already have an account? Sign In here →
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : authMode === 'forgot' ? (
+                <View style={styles.guestFormContainer}>
+                  {resetStep === 1 ? (
+                    <>
+                      <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Registered Enterprise Email:</Text>
+                      <TextInput
+                        style={[styles.textInput, { backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.surfaceAlt }]}
+                        placeholder="e.g. tech@solarscan.ai"
+                        placeholderTextColor={theme.textMuted}
+                        value={authEmail}
+                        onChangeText={setAuthEmail}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                      />
+                      <Text style={{ fontSize: 10, color: theme.textMuted, marginBottom: 12 }}>
+                        A demonstration OTP token will be generated to verify your email.
+                      </Text>
+                      <TouchableOpacity
+                        style={[styles.submitAuthBtn, { backgroundColor: theme.accent }]}
+                        onPress={handleRequestResetToken}
+                      >
+                        <Text style={[styles.submitAuthBtnText, { color: theme.accentText }]}>
+                          Verify Email & Generate OTP Token
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <View style={[styles.demoTokenBanner, { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: '#f59e0b' }]}>
+                        <Text style={{ fontSize: 10, color: '#f59e0b', fontWeight: 'bold' }}>
+                          🔑 Demonstration Recovery Token:
+                        </Text>
+                        <Text style={{ fontSize: 14, color: '#f59e0b', fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', marginTop: 3 }}>
+                          {recoveryCode}
+                        </Text>
+                      </View>
+
+                      <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>New Password:</Text>
+                      <View style={[styles.passwordInputContainer, { backgroundColor: theme.surface, borderColor: theme.surfaceAlt }]}>
+                        <TextInput
+                          style={[styles.passwordTextInput, { color: theme.textPrimary }]}
+                          placeholder="Enter new password"
+                          placeholderTextColor={theme.textMuted}
+                          secureTextEntry={!showNewPassword}
+                          value={newPassword}
+                          onChangeText={setNewPassword}
+                        />
+                        <TouchableOpacity
+                          style={styles.eyeBtn}
+                          onPress={() => setShowNewPassword(!showNewPassword)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Text style={styles.eyeIconText}>{showNewPassword ? '👁️' : '🙈'}</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Confirm New Password:</Text>
+                      <View style={[styles.passwordInputContainer, { backgroundColor: theme.surface, borderColor: theme.surfaceAlt }]}>
+                        <TextInput
+                          style={[styles.passwordTextInput, { color: theme.textPrimary }]}
+                          placeholder="Re-enter password"
+                          placeholderTextColor={theme.textMuted}
+                          secureTextEntry={!showConfirmPassword}
+                          value={confirmPassword}
+                          onChangeText={setConfirmPassword}
+                        />
+                        <TouchableOpacity
+                          style={styles.eyeBtn}
+                          onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Text style={styles.eyeIconText}>{showConfirmPassword ? '👁️' : '🙈'}</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[styles.submitAuthBtn, { backgroundColor: theme.accent, marginTop: 14 }]}
+                        onPress={handleConfirmPasswordReset}
+                      >
+                        <Text style={[styles.submitAuthBtnText, { color: theme.accentText }]}>
+                          Update Password & Sign In
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  <TouchableOpacity
+                    style={{ alignSelf: 'center', marginTop: 12 }}
+                    onPress={() => setAuthMode('signin')}
+                  >
+                    <Text style={{ fontSize: 11, color: theme.accent }}>
+                      ← Back to Sign In
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.guestFormContainer}>
+                  {/* Quick Preset Buttons */}
+                  <Text style={[styles.quickPersonaHeader, { color: theme.accent, marginBottom: 8 }]}>
+                    ⚡ Quick-Fill Credentials for Testing:
+                  </Text>
+                  <View style={styles.personaGrid}>
+                    {PERSONAS.map((p) => (
+                      <TouchableOpacity
+                        key={p.id}
+                        style={[styles.personaBtn, { backgroundColor: theme.surface, borderColor: p.badgeColor }]}
+                        onPress={() => handleQuickPersona(p)}
+                      >
+                        <Text style={[styles.personaBtnName, { color: p.badgeColor }]}>{p.name}</Text>
+                        <Text style={[styles.personaBtnRole, { color: theme.textMuted }]}>{p.badge}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Enterprise Email:</Text>
+                  <TextInput
+                    style={[styles.textInput, { backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.surfaceAlt }]}
+                    placeholder="tech@solarscan.ai"
+                    placeholderTextColor={theme.textMuted}
+                    value={authEmail}
+                    onChangeText={setAuthEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+
+                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Password:</Text>
+                  <View style={[styles.passwordInputContainer, { backgroundColor: theme.surface, borderColor: theme.surfaceAlt }]}>
+                    <TextInput
+                      style={[styles.passwordTextInput, { color: theme.textPrimary }]}
+                      placeholder="Enter password"
+                      placeholderTextColor={theme.textMuted}
+                      secureTextEntry={!showAuthPassword}
+                      value={authPassword}
+                      onChangeText={setAuthPassword}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeBtn}
+                      onPress={() => setShowAuthPassword(!showAuthPassword)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Text style={styles.eyeIconText}>{showAuthPassword ? '👁️' : '🙈'}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 8 }}>
+                    <Text style={{ fontSize: 10, color: theme.textMuted }}>
+                      Tip: Tap 👁️ to verify your password before signing in
+                    </Text>
+                    <TouchableOpacity onPress={() => setAuthMode('forgot')}>
+                      <Text style={{ fontSize: 11, color: theme.accent, fontWeight: '600' }}>
+                        Forgot?
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.submitAuthBtn, { backgroundColor: theme.accent, marginTop: 10 }]}
+                    onPress={handleAuthSubmit}
+                  >
+                    <Text style={[styles.submitAuthBtnText, { color: theme.accentText }]}>
+                      🔑 Sign In to Console
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{ alignSelf: 'center', marginTop: 12 }}
+                    onPress={() => setAuthMode('signup')}
+                  >
+                    <Text style={{ fontSize: 11, color: theme.accent }}>
+                      Don't have an account? Join / Register here →
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        ) : isTabBlocked ? (
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={[styles.guardCard, { backgroundColor: theme.cardBg }]}>
               <Text style={styles.guardIcon}>🛡️</Text>
@@ -1507,94 +1881,90 @@ export default function App() {
                       </View>
                     )}
 
-                    {/* Image Preview with Detection Bounding Box Overlays */}
+                    {/* Compact Panel Inspection Card (Zero GPU Texture Memory Crash - Identical Stability to Batch Mode) */}
                     {singleImageUri && !scanning && (
-                      <>
-                      <View style={[styles.previewContainer, { borderColor: theme.accent }]}>
-                        <Image source={{ uri: singleImageUri }} style={styles.panelImage} resizeMode="cover" resizeMethod="resize" onError={() => {}} />
+                      <View style={[styles.compactInspectCard, { backgroundColor: theme.cardBg, borderColor: singleResult ? (singleResult.isHealthy ? '#10b981' : (singleResult.color || theme.accent)) : theme.accent }]}>
+                        <View style={styles.compactInspectHeader}>
+                          <View style={[styles.compactInspectThumb, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                            <Image
+                              source={{ uri: singleImageUri }}
+                              style={styles.compactInspectThumbImg}
+                              resizeMode="cover"
+                              resizeMethod="resize"
+                              onError={() => {}}
+                            />
+                          </View>
+                          <View style={styles.compactInspectDetails}>
+                            <Text style={[styles.compactInspectTitle, { color: theme.textPrimary }]} numberOfLines={1}>
+                              {singleImageFilename || 'solar_panel.jpg'}
+                            </Text>
+                            <View style={styles.compactInspectBadges}>
+                              <View style={[styles.gatekeeperBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: '#10b981' }]}>
+                                <Text style={[styles.gatekeeperBadgeText, { color: '#10b981' }]}>✅ PASSED GATEKEEPER</Text>
+                              </View>
+                              {singleResult && (
+                                <View style={[styles.gatekeeperBadge, { backgroundColor: singleResult.isHealthy ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)', borderColor: singleResult.color || '#ef4444' }]}>
+                                  <Text style={[styles.gatekeeperBadgeText, { color: singleResult.color || '#ef4444' }]}>
+                                    {singleResult.urgency || (singleResult.isHealthy ? 'P5 - NOMINAL' : 'P2 - HIGH')}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
 
-                        {/* Visual Detection Bounding Boxes drawn over image */}
-                        {singleResult?.detections?.map((det, idx) => {
-                          const box = det.bbox || { x: 15, y: 15, w: 70, h: 70 };
-                          const boxColor = det.color || singleResult?.color || '#ef4444';
-                          return (
-                            <View
-                              key={det.id || idx}
-                              style={[
-                                styles.detectionBoundingBox,
-                                {
-                                  left: `${box.x}%`,
-                                  top: `${box.y}%`,
-                                  width: `${box.w}%`,
-                                  height: `${box.h}%`,
-                                  borderColor: boxColor,
-                                  backgroundColor: 'rgba(0, 229, 255, 0.08)'
-                                }
-                              ]}
-                            >
-                              <View style={[styles.bboxLabelBadge, { backgroundColor: boxColor }]}>
-                                <Text style={styles.bboxLabelText}>
-                                  {(det.type || singleResult?.type || 'DEFECT').toUpperCase()} • {Math.round((det.conf !== undefined ? det.conf : 0.95) * 100)}%
+                            {/* Visual Bounding Box Coordinate Telemetry */}
+                            {singleResult?.detections?.map((det, idx) => (
+                              <View key={det.id || idx} style={[styles.compactBboxBadge, { backgroundColor: theme.surface, borderColor: det.color || '#ef4444' }]}>
+                                <Text style={[styles.compactBboxText, { color: det.color || theme.accent }]}>
+                                  📍 BBOX: [X:{det.bbox?.x}% Y:{det.bbox?.y}% W:{det.bbox?.w}% H:{det.bbox?.h}%] • {Math.round((det.conf || 0.95) * 100)}% Conf
                                 </Text>
                               </View>
-                            </View>
-                          );
-                        })}
-
-                        {/* Cyber Reticle Corner Accents */}
-                        <View style={styles.hudOverlay} pointerEvents="none">
-                          <View style={[styles.hudCornerTL, { borderColor: theme.accent }]} />
-                          <View style={[styles.hudCornerTR, { borderColor: theme.accent }]} />
-                          <View style={[styles.hudCornerBL, { borderColor: theme.accent }]} />
-                          <View style={[styles.hudCornerBR, { borderColor: theme.accent }]} />
-                          <View style={[styles.hudTag, { backgroundColor: theme.cardBg, borderColor: theme.accent }]}>
-                            <Text style={[styles.hudTagText, { color: theme.accent }]}>
-                              {singleResult ? 'DETECTION BOUNDING BOXES ACTIVE' : 'IEC 62446-3 HUD ACTIVE'}
+                            ))}
+                            <Text style={[styles.compactInspectSub, { color: theme.textMuted }]}>
+                              Single Panel Triage & Diagnostic Audit
                             </Text>
                           </View>
                         </View>
-                      </View>
 
-                      {/* Quick Action Bar under Scanned Image */}
-                      <View style={styles.quickActionBar}>
-                        <TouchableOpacity
-                          style={[styles.quickActionBtn, { backgroundColor: theme.surface, borderColor: theme.accent }]}
-                          onPress={reScanCurrentImage}
-                          disabled={scanning}
-                        >
-                          <Text style={[styles.quickActionIcon, { color: theme.accent }]}>🔄</Text>
-                          <Text style={[styles.quickActionText, { color: theme.accent }]}>Re-Scan</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[styles.quickActionBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                          onPress={pickSingleImage}
-                          disabled={scanning}
-                        >
-                          <Text style={styles.quickActionIcon}>➕</Text>
-                          <Text style={[styles.quickActionText, { color: theme.textPrimary }]}>Add/Scan New</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[styles.quickActionBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                          onPress={startCamera}
-                          disabled={scanning}
-                        >
-                          <Text style={styles.quickActionIcon}>📸</Text>
-                          <Text style={[styles.quickActionText, { color: theme.textPrimary }]}>Take Photo</Text>
-                        </TouchableOpacity>
-
-                        {singleResult && (
+                        {/* Quick Action Bar under Compact Scanned Card */}
+                        <View style={styles.quickActionBar}>
                           <TouchableOpacity
-                            style={[styles.quickActionBtn, { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: '#f59e0b' }]}
-                            onPress={() => downloadSingleReport(singleResult)}
+                            style={[styles.quickActionBtn, { backgroundColor: theme.surface, borderColor: theme.accent }]}
+                            onPress={reScanCurrentImage}
+                            disabled={scanning}
                           >
-                            <Text style={styles.quickActionIcon}>📥</Text>
-                            <Text style={[styles.quickActionText, { color: '#f59e0b' }]}>Report</Text>
+                            <Text style={[styles.quickActionIcon, { color: theme.accent }]}>🔄</Text>
+                            <Text style={[styles.quickActionText, { color: theme.accent }]}>Re-Scan</Text>
                           </TouchableOpacity>
-                        )}
+
+                          <TouchableOpacity
+                            style={[styles.quickActionBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                            onPress={pickSingleImage}
+                            disabled={scanning}
+                          >
+                            <Text style={styles.quickActionIcon}>➕</Text>
+                            <Text style={[styles.quickActionText, { color: theme.textPrimary }]}>Add New</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={[styles.quickActionBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                            onPress={startCamera}
+                            disabled={scanning}
+                          >
+                            <Text style={styles.quickActionIcon}>📸</Text>
+                            <Text style={[styles.quickActionText, { color: theme.textPrimary }]}>Camera</Text>
+                          </TouchableOpacity>
+
+                          {singleResult && (
+                            <TouchableOpacity
+                              style={[styles.quickActionBtn, { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: '#f59e0b' }]}
+                              onPress={() => downloadSingleReport(singleResult)}
+                            >
+                              <Text style={styles.quickActionIcon}>📥</Text>
+                              <Text style={[styles.quickActionText, { color: '#f59e0b' }]}>Report</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
-                      </>
                     )}
 
                     {/* Single Scan Diagnostic Results Card */}
@@ -2051,8 +2421,42 @@ export default function App() {
 
                   <View style={styles.droneCoordsBox}>
                     <Text style={[styles.droneCoords, { color: theme.textSecondary }]}>
-                      GPS: 7.3395° N, 2.3160° W (Sunyani Station)
+                      GPS: 7.3395° N, 2.3160° W (Bui & Sunyani Field Station)
                     </Text>
+                  </View>
+
+                  {/* Aerial Sweep Actions */}
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                    <TouchableOpacity
+                      style={[styles.droneActionBtn, { backgroundColor: theme.surface, borderColor: theme.accent, flex: 1 }]}
+                      onPress={() => {
+                        Alert.alert("Autonomous Survey Executed", "Drone executed waypoint grid mission across 24 solar panel arrays. Orthomosaics stitched successfully.");
+                      }}
+                    >
+                      <Text style={[styles.droneActionBtnText, { color: theme.accent }]}>⚡ Trigger Survey</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.droneActionBtn, { backgroundColor: 'rgba(2, 132, 199, 0.2)', borderColor: '#0284c7', flex: 1.3 }]}
+                      onPress={() => {
+                        const aerialBatch = [
+                          { id: `aerial_${Date.now()}_1`, fileName: "Aerial_Array_A3_Hotspot.jpg", uri: null, status: 'pending', result: null },
+                          { id: `aerial_${Date.now()}_2`, fileName: "Aerial_Array_B2_MicroCrack.jpg", uri: null, status: 'pending', result: null },
+                          { id: `aerial_${Date.now()}_3`, fileName: "Aerial_Array_A6_Soiling.jpg", uri: null, status: 'pending', result: null },
+                          { id: `aerial_${Date.now()}_4`, fileName: "Aerial_Array_C1_Healthy.jpg", uri: null, status: 'pending', result: null }
+                        ];
+                        setBatchQueue(aerialBatch);
+                        setActiveTab('scan');
+                        setScanSubMode('batch');
+                        runBatchScan(aerialBatch);
+                        Alert.alert(
+                          "🚁 Aerial Sweep Ingested",
+                          "4 drone aerial panel captures transferred to Multi-Panel Batch Scan Lab. Initiating AI defect analysis."
+                        );
+                      }}
+                    >
+                      <Text style={[styles.droneActionBtnText, { color: '#38bdf8' }]}>🚁 Ingest to Scan Lab</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -2180,6 +2584,67 @@ export default function App() {
                   </TouchableOpacity>
                 </View>
 
+                {/* 5,082-Image Dataset Provenance Breakdown */}
+                <View style={[styles.datasetProvCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                  <Text style={[styles.datasetProvTitle, { color: theme.accent }]}>
+                    📊 YOLOv8 AI Model Training Provenance (5,082 Images)
+                  </Text>
+                  <Text style={[styles.datasetProvSub, { color: theme.textMuted }]}>
+                    Rigorous multi-source dataset splits aligned with dissertation documentation
+                  </Text>
+
+                  <View style={styles.datasetGridRow}>
+                    <View style={[styles.datasetStatTile, { backgroundColor: theme.surface }]}>
+                      <Text style={[styles.datasetStatNum, { color: theme.accent }]}>5,082</Text>
+                      <Text style={[styles.datasetStatLbl, { color: theme.textMuted }]}>Total Images</Text>
+                    </View>
+                    <View style={[styles.datasetStatTile, { backgroundColor: theme.surface }]}>
+                      <Text style={[styles.datasetStatNum, { color: '#10b981' }]}>3,658</Text>
+                      <Text style={[styles.datasetStatLbl, { color: theme.textMuted }]}>Train (72%)</Text>
+                    </View>
+                    <View style={[styles.datasetStatTile, { backgroundColor: theme.surface }]}>
+                      <Text style={[styles.datasetStatNum, { color: '#f59e0b' }]}>762</Text>
+                      <Text style={[styles.datasetStatLbl, { color: theme.textMuted }]}>Val (15%)</Text>
+                    </View>
+                    <View style={[styles.datasetStatTile, { backgroundColor: theme.surface }]}>
+                      <Text style={[styles.datasetStatNum, { color: '#8b5cf6' }]}>662</Text>
+                      <Text style={[styles.datasetStatLbl, { color: theme.textMuted }]}>Test (13%)</Text>
+                    </View>
+                  </View>
+
+                  {/* Sources List */}
+                  <View style={{ marginTop: 10, gap: 6 }}>
+                    {[
+                      { src: "Roboflow Universe Thermography & EL", count: "2,420 imgs", tag: "Benchmark" },
+                      { src: "Ghana Utility Inspections (Bui 50MW & Kaleo 13MW)", count: "1,380 imgs", tag: "Field Audit" },
+                      { src: "PVEL-AD Photovoltaic Defect Dataset", count: "782 imgs", tag: "Public Research" },
+                      { src: "Curated Thermal Infrared Library", count: "500 imgs", tag: "Thermal DB" }
+                    ].map((s, i) => (
+                      <View key={i} style={[styles.sourceItemRow, { backgroundColor: theme.surface }]}>
+                        <Text style={[styles.sourceItemName, { color: theme.textPrimary }]}>{s.src}</Text>
+                        <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold' }}>{s.count}</Text>
+                          <View style={[styles.sourceItemTag, { backgroundColor: theme.badgeBg }]}>
+                            <Text style={[styles.sourceItemTagText, { color: theme.accent }]}>{s.tag}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Simplified YOLOv8n Performance Metrics */}
+                  <View style={[styles.metricsBanner, { backgroundColor: theme.surface, borderColor: theme.border, marginTop: 12 }]}>
+                    <Text style={[styles.metricsBannerTitle, { color: theme.textPrimary }]}>
+                      YOLOv8n 100-Epoch Validated Performance:
+                    </Text>
+                    <Text style={[styles.metricsBannerText, { color: theme.textSecondary }]}>
+                      • Mean Average Precision (mAP@50): <Text style={{ color: '#10b981', fontWeight: 'bold' }}>0.697 (69.7%)</Text>{"\n"}
+                      • Precision (P): <Text style={{ color: theme.accent, fontWeight: 'bold' }}>0.597</Text> • Recall (R): <Text style={{ color: theme.accent, fontWeight: 'bold' }}>0.734</Text>{"\n"}
+                      • Training Loss: Converged cleanly from <Text style={{ color: '#ef4444' }}>2.80</Text> down to <Text style={{ color: '#10b981', fontWeight: 'bold' }}>0.45</Text>
+                    </Text>
+                  </View>
+                </View>
+
                 {INITIAL_AUDIT_LOGS.map((log) => (
                   <View key={log.id} style={[styles.auditLogItem, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
                     <View style={styles.auditLogHeader}>
@@ -2244,6 +2709,13 @@ export default function App() {
                   >
                     <Text style={[styles.authSwitchBtnText, { color: theme.accent }]}>🔑 Switch Account or Sign In</Text>
                   </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.authSwitchBtn, { backgroundColor: 'rgba(239, 68, 68, 0.12)', borderColor: '#ef4444', marginTop: 8 }]}
+                    onPress={handleSignOut}
+                  >
+                    <Text style={[styles.authSwitchBtnText, { color: '#ef4444' }]}>🚪 Sign Out of Account</Text>
+                  </TouchableOpacity>
                 </View>
               </ScrollView>
             )}
@@ -2252,58 +2724,26 @@ export default function App() {
 
       </View>
 
-      {/* 4. Bottom Quick Nav Bar */}
-      <View style={[styles.bottomNav, { backgroundColor: theme.headerBg, borderTopColor: theme.border }]}>
-        <TouchableOpacity
-          style={[styles.navItem, activeTab === 'scan' && [styles.navItemActive, { borderTopColor: theme.accent }]]}
-          onPress={() => setActiveTab('scan')}
-        >
-          <Text style={styles.navIcon}>🔬</Text>
-          <Text style={[styles.navLabel, { color: theme.textMuted }, activeTab === 'scan' && { color: theme.accent, fontWeight: 'bold' }]}>
-            Scan Lab
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.navItem, activeTab === 'farms' && [styles.navItemActive, { borderTopColor: theme.accent }]]}
-          onPress={() => setActiveTab('farms')}
-        >
-          <Text style={styles.navIcon}>☀️</Text>
-          <Text style={[styles.navLabel, { color: theme.textMuted }, activeTab === 'farms' && { color: theme.accent, fontWeight: 'bold' }]}>
-            Farms
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.navItem, activeTab === 'orders' && [styles.navItemActive, { borderTopColor: theme.accent }]]}
-          onPress={() => setActiveTab('orders')}
-        >
-          <Text style={styles.navIcon}>📋</Text>
-          <Text style={[styles.navLabel, { color: theme.textMuted }, activeTab === 'orders' && { color: theme.accent, fontWeight: 'bold' }]}>
-            Orders
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.navItem, activeTab === 'database' && [styles.navItemActive, { borderTopColor: theme.accent }]]}
-          onPress={() => setActiveTab('database')}
-        >
-          <Text style={styles.navIcon}>💾</Text>
-          <Text style={[styles.navLabel, { color: theme.textMuted }, activeTab === 'database' && { color: theme.accent, fontWeight: 'bold' }]}>
-            Database
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.navItem, activeTab === 'settings' && [styles.navItemActive, { borderTopColor: theme.accent }]]}
-          onPress={() => setActiveTab('settings')}
-        >
-          <Text style={styles.navIcon}>⚙️</Text>
-          <Text style={[styles.navLabel, { color: theme.textMuted }, activeTab === 'settings' && { color: theme.accent, fontWeight: 'bold' }]}>
-            Settings
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* 4. Bottom Quick Nav Bar (Strict RBAC - Only rendered for authenticated users) */}
+      {currentUser && visibleTabs.length > 0 && (
+        <View style={[styles.bottomNav, { backgroundColor: theme.headerBg, borderTopColor: theme.border }]}>
+          {visibleTabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.navItem, isActive && [styles.navItemActive, { borderTopColor: theme.accent }]]}
+                onPress={() => setActiveTab(tab.id)}
+              >
+                <Text style={styles.navIcon}>{tab.icon}</Text>
+                <Text style={[styles.navLabel, { color: theme.textMuted }, isActive && { color: theme.accent, fontWeight: 'bold' }]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       {/* 5. FLOATING & DRAGGABLE AI CHATBOT BUTTON (Like the laptop!) */}
       <Animated.View
@@ -3096,6 +3536,14 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: 'bold',
   },
+  signOutHeaderBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   themeToggleBtn: {
     width: 30,
     height: 30,
@@ -3251,6 +3699,202 @@ const styles = StyleSheet.create({
   scanningSub: {
     fontSize: 10,
     marginTop: 4,
+  },
+  // V3 Enhanced Guest & Compact Inspection Styles
+  droneActionBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  droneActionBtnText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  datasetProvCard: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginVertical: 10,
+  },
+  datasetProvTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  datasetProvSub: {
+    fontSize: 10,
+    marginBottom: 10,
+  },
+  datasetGridRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  datasetStatTile: {
+    flex: 1,
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  datasetStatNum: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  datasetStatLbl: {
+    fontSize: 8,
+    marginTop: 2,
+  },
+  sourceItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 6,
+  },
+  sourceItemName: {
+    fontSize: 10,
+    fontWeight: '600',
+    flex: 1,
+  },
+  sourceItemTag: {
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  sourceItemTagText: {
+    fontSize: 8,
+    fontWeight: 'bold',
+  },
+  metricsBanner: {
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  metricsBannerTitle: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  metricsBannerText: {
+    fontSize: 10,
+    lineHeight: 16,
+  },
+  guestHeroCard: {
+    padding: 24,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    marginVertical: 12,
+    alignItems: 'center',
+  },
+  guestLockCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  guestHeroTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  guestHeroDesc: {
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  guestFormContainer: {
+    width: '100%',
+    marginTop: 14,
+  },
+  roleSelectionGrid: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  roleSelectCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  roleSelectTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  roleSelectDesc: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  compactBboxBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  compactBboxText: {
+    fontSize: 9,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: 'bold',
+  },
+  compactInspectCard: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    marginBottom: 16,
+  },
+  compactInspectHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  compactInspectThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  compactInspectThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+  compactInspectDetails: {
+    flex: 1,
+  },
+  compactInspectTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  compactInspectBadges: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginBottom: 4,
+  },
+  gatekeeperBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  gatekeeperBadgeText: {
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  compactInspectSub: {
+    fontSize: 10,
   },
   previewContainer: {
     borderRadius: 14,

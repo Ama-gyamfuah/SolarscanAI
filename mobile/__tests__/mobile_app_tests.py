@@ -164,7 +164,18 @@ class MobileAppTestSuite(unittest.TestCase):
         self.assertIn("serverConnected && serverUrl", content, "Must not attempt network upload when offline")
         print("[PASS] Test 15: Android crash prevention guards verified.")
 
+    def test_16_file_size_limit_and_signout(self):
+        """Verify 5MB file size limit guard and Sign Out controls in App.js."""
+        with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("asset.fileSize > 5 * 1024 * 1024", content, "Must enforce 5MB file size limit")
+        self.assertIn("handleSignOut", content, "handleSignOut handler must exist")
+        self.assertIn("Confirm Session Sign Out", content, "Must prompt user to confirm sign out")
+        self.assertIn("signOutHeaderBtn", content, "Sign out button must be in header")
+        print("[PASS] Test 16: 5MB file limit and Sign Out controls verified.")
+
 if __name__ == "__main__":
     unittest.main()
+
 
 

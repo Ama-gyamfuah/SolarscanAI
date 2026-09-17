@@ -19,12 +19,12 @@ export const PERSONAS = [
     clearance_level: 1,
     roleTitle: "Field Solar Technician",
     badge: "LEVEL 1 • FIELD TECH",
-    badgeColor: "#10b981", // Green
+    badgeColor: "#10b981",
     avatar: "KM",
-    facility: "Accra Solar Station #2",
+    facility: "UENR Sunyani Solar Station #1",
     description: "Single panel triage, live hardware diagnostics, assigned repair work-orders.",
     defaultTab: "scan",
-    allowedTabs: ["scan"]
+    allowedTabs: ["scan", "work_orders"]
   },
   {
     id: "drone_pilot",
@@ -35,12 +35,12 @@ export const PERSONAS = [
     clearance_level: 2,
     roleTitle: "Drone Inspection Pilot",
     badge: "LEVEL 2 • DRONE PILOT",
-    badgeColor: "#0284c7", // Blue
+    badgeColor: "#0284c7",
     avatar: "AO",
     facility: "West African Drone Survey Unit",
     description: "Multi-panel batch ingestion, GPS drone flight grid, aerial thermal mapping.",
     defaultTab: "drone",
-    allowedTabs: ["drone", "scan"]
+    allowedTabs: ["scan", "drone"]
   },
   {
     id: "auditor",
@@ -51,28 +51,28 @@ export const PERSONAS = [
     clearance_level: 3,
     roleTitle: "QA & Warranty Auditor",
     badge: "LEVEL 3 • AUDITOR",
-    badgeColor: "#8b5cf6", // Purple
+    badgeColor: "#8b5cf6",
     avatar: "KB",
     facility: "Clean Energy QA & Compliance Bureau",
     description: "Cryptographic SHA-256 audit trail, confusion matrix, retraining dataset export.",
     defaultTab: "evidence",
-    allowedTabs: ["evidence", "database", "scan"]
+    allowedTabs: ["scan", "farms", "alerts", "work_orders", "drone", "analytics", "database", "evidence"]
   },
   {
     id: "asset_manager",
-    name: "Dr. Emmanuel Frimpong",
-    full_name: "Dr. Emmanuel Frimpong",
+    name: "Dr. Samuel O. Frimpong",
+    full_name: "Dr. Samuel O. Frimpong",
     email: "manager@solarscan.ai",
     role: "asset_manager",
     clearance_level: 4,
-    roleTitle: "Solar Plant IT Asset Manager",
-    badge: "LEVEL 4 • IT ASSET MGR",
-    badgeColor: "#f59e0b", // Amber
-    avatar: "EF",
-    facility: "Regional Solar Plant Operations",
-    description: "Fleet financial yield loss, central database management, AI retraining approval.",
+    roleTitle: "Solar Plant IT Asset Manager & Supervisor",
+    badge: "LEVEL 4 • SUPERVISOR",
+    badgeColor: "#f59e0b",
+    avatar: "SF",
+    facility: "Department of ITDS, UENR",
+    description: "Supervisor oversight, fleet financial yield loss, central database management, AI retraining approval.",
     defaultTab: "analytics",
-    allowedTabs: ["analytics", "database", "scan", "drone", "evidence"]
+    allowedTabs: ["analytics"]
   }
 ];
 
@@ -179,7 +179,7 @@ export function PasswordCriteriaBox({ password = "", showHeader = true }) {
   );
 }
 
-export default function LoginModal({ isOpen, onClose, onLoginSuccess, initialTab = "signin" }) {
+export default function LoginModal({ isOpen, onClose, onLoginSuccess, initialTab = "signin", mandatory = false }) {
   const [activeMode, setActiveMode] = useState(initialTab); // "signin" | "register" | "forgot"
   
   // Sign In state
@@ -535,19 +535,21 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, initialTab
             </p>
           </div>
 
-          <button
-            onClick={onClose}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--text-dim)",
-              fontSize: "20px",
-              cursor: "pointer",
-              padding: "4px 8px"
-            }}
-          >
-            ✕
-          </button>
+          {!mandatory && (
+            <button
+              onClick={onClose}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "var(--text-dim)",
+                fontSize: "20px",
+                cursor: "pointer",
+                padding: "4px 8px"
+              }}
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* Tab Selector: Sign In vs Join / Register vs Reset Password */}
