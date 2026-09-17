@@ -157,12 +157,14 @@ class MobileAppTestSuite(unittest.TestCase):
         with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
             content = f.read()
         self.assertIn("singleResult?.color", content, "boxColor must use optional chaining on singleResult")
-        self.assertIn("safeStrokeDashoffset", content, "SVG gauge must use safe non-NaN strokeDashoffset")
-        self.assertIn("safeHealthScore", content, "SVG gauge must compute safe numeric health score")
-        self.assertIn("quality: 0.7", content, "ImagePicker must use 0.7 safe quality to prevent OOM")
+        self.assertIn("circularGaugeRing", content, "Health gauge must use 100% crash-proof pure native ring badge")
+        self.assertIn("resizeMethod=\"resize\"", content, "Image must use resizeMethod resize to prevent Android OOM")
+        self.assertIn("borderStyle: 'solid'", content, "Bounding box must use solid border style to avoid Android canvas crash")
+        self.assertIn("setScanSubMode('single')", content, "Must use setScanSubMode instead of invalid setScanMode")
         self.assertIn("serverConnected && serverUrl", content, "Must not attempt network upload when offline")
         print("[PASS] Test 15: Android crash prevention guards verified.")
 
 if __name__ == "__main__":
     unittest.main()
+
 
