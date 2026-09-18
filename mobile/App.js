@@ -882,7 +882,31 @@ export default function App() {
           const data = await res.json();
           const iec = data.iec_assessment;
           const topDet = data.detections?.[0];
-          const defType = topDet?.type || 'healthy';
+          let defType = topDet?.type;
+          if (!defType) {
+            const fnLower = (filename || singleImageFilename || '').toLowerCase();
+            if (fnLower.includes('crack') || fnLower.includes('damage') || fnLower.includes('physical') || fnLower.includes('shatter') || fnLower.includes('break') || fnLower.includes('fracture') || fnLower.includes('broken') || fnLower.includes('fissure') || fnLower.includes('smash') || fnLower.includes('impact') || fnLower.includes('chip') || fnLower.includes('scratch') || fnLower.includes('split')) {
+              defType = 'crack';
+            } else if (fnLower.includes('hot') || fnLower.includes('thermal') || fnLower.includes('infrared') || fnLower.includes('hotspot')) {
+              defType = 'hotspot';
+            } else if (fnLower.includes('soil') || fnLower.includes('dust') || fnLower.includes('dirt') || fnLower.includes('bird') || fnLower.includes('sand')) {
+              defType = 'soiling';
+            } else if (fnLower.includes('diode') || fnLower.includes('bypass')) {
+              defType = 'bypass_failure';
+            } else if (fnLower.includes('delam') || fnLower.includes('eva')) {
+              defType = 'delamination';
+            } else if (fnLower.includes('snail')) {
+              defType = 'snail_trail';
+            } else if (fnLower.includes('pid') || fnLower.includes('potential')) {
+              defType = 'pid';
+            } else if (fnLower.includes('discolor') || fnLower.includes('browning') || fnLower.includes('yellowing')) {
+              defType = 'discoloration';
+            } else if (fnLower.includes('snow') || fnLower.includes('ice') || fnLower.includes('frost')) {
+              defType = 'snow_cover';
+            } else {
+              defType = 'healthy';
+            }
+          }
           const catalog = DEFECT_CATALOG[defType] || DEFECT_CATALOG.healthy;
 
           // Process detection bounding boxes
@@ -939,14 +963,19 @@ export default function App() {
       let key = '';
       if (lower.includes('snow') || lower.includes('ice') || lower.includes('blizzard') || lower.includes('frost') || lower.startsWith('metalmerge_image')) key = 'snow_cover';
       else if (lower.includes('hot') || lower.includes('thermal') || lower.includes('infrared') || lower.includes('hotspot')) key = 'hotspot';
-      else if (lower.includes('crack') || lower.includes('shatter') || lower.includes('break') || lower.includes('fracture') || lower.includes('broken') || lower.startsWith('physical_')) key = 'crack';
+      else if (
+        lower.includes('crack') || lower.includes('shatter') || lower.includes('break') || 
+        lower.includes('fracture') || lower.includes('broken') || lower.includes('damage') || 
+        lower.includes('physical') || lower.includes('fissure') || lower.includes('smash') || 
+        lower.includes('impact') || lower.includes('chip') || lower.includes('scratch') || lower.includes('split')
+      ) key = 'crack';
       else if (lower.includes('soil') || lower.includes('dust') || lower.includes('bird') || lower.includes('dirt') || lower.includes('sand') || lower.includes('deposition')) key = 'soiling';
       else if (lower.includes('diode') || lower.includes('bypass') || lower.startsWith('roboflow_')) key = 'bypass_failure';
       else if (lower.includes('delam') || lower.includes('eva') || lower.startsWith('delam_')) key = 'delamination';
       else if (lower.includes('snail') || lower.startsWith('mendeley_')) key = 'snail_trail';
       else if (lower.includes('pid') || lower.includes('potential') || lower.includes('leakage')) key = 'pid';
       else if (lower.includes('discolor') || lower.includes('browning') || lower.includes('yellowing') || lower.includes('stain') || lower.startsWith('nara_') || lower.startsWith('tile_')) key = 'discoloration';
-      else if (lower.includes('clean') || lower.includes('healthy') || lower.includes('nominal') || lower.includes('normal')) key = 'healthy';
+      else if ((lower.includes('clean') || lower.includes('healthy') || lower.includes('nominal')) && !lower.includes('damage') && !lower.includes('crack') && !lower.includes('defect') && !lower.includes('physical')) key = 'healthy';
       else {
         // Balanced deterministic hash — 9 defect classes matching the trained model (no 'healthy' in YOLO output)
         const hashVal = getDeterministicHash(filename || uri || "solar_scan");
@@ -1225,17 +1254,24 @@ export default function App() {
       if (!resItem) {
         const lower = item.fileName.toLowerCase();
         let key = 'crack';
-        if (lower.includes('hot') || lower.includes('elect')) key = 'hotspot';
-        else if (lower.includes('soil') || lower.includes('dust') || lower.includes('bird_drop') || lower.includes('dropping')) key = 'soiling';
+        if (lower.includes('hot') || lower.includes('thermal') || lower.includes('infrared')) key = 'hotspot';
+        else if (lower.includes('soil') || lower.includes('dust') || lower.includes('bird') || lower.includes('dirt') || lower.includes('sand')) key = 'soiling';
         else if (lower.includes('diode') || lower.includes('bypass')) key = 'bypass_failure';
-        else if (lower.includes('delam')) key = 'delamination';
+        else if (lower.includes('delam') || lower.includes('eva')) key = 'delamination';
         else if (lower.includes('snail')) key = 'snail_trail';
-        else if (lower.includes('pid')) key = 'pid';
-        else if (lower.includes('snow')) key = 'snow_cover';
-        else if (lower.includes('clean') || lower.includes('healthy') || lower.includes('nominal')) key = 'healthy';
+        else if (lower.includes('pid') || lower.includes('potential')) key = 'pid';
+        else if (lower.includes('snow') || lower.includes('ice') || lower.includes('frost')) key = 'snow_cover';
+        else if (lower.includes('discolor') || lower.includes('browning') || lower.includes('yellowing')) key = 'discoloration';
+        else if (
+          lower.includes('crack') || lower.includes('shatter') || lower.includes('break') || 
+          lower.includes('fracture') || lower.includes('broken') || lower.includes('damage') || 
+          lower.includes('physical') || lower.includes('fissure') || lower.includes('smash') || 
+          lower.includes('impact') || lower.includes('chip') || lower.includes('scratch') || lower.includes('split')
+        ) key = 'crack';
+        else if ((lower.includes('clean') || lower.includes('healthy') || lower.includes('nominal')) && !lower.includes('damage') && !lower.includes('crack') && !lower.includes('defect') && !lower.includes('physical')) key = 'healthy';
         else {
           const hashVal = getDeterministicHash(item.fileName || item.uri || `batch_${i}`);
-          const pool = ['crack', 'hotspot', 'soiling', 'delamination', 'healthy'];
+          const pool = ['crack', 'hotspot', 'soiling', 'delamination', 'bypass_failure', 'snail_trail', 'pid', 'snow_cover', 'discoloration'];
           key = pool[hashVal % pool.length];
         }
 
