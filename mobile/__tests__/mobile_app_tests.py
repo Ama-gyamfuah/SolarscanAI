@@ -4,7 +4,7 @@ import json
 import os
 import re
 
-SERVER_URL = "http://127.0.0.1:8000"
+SERVER_URL = os.environ.get("SERVER_URL", "https://solarscan-backend-ikwb.onrender.com")
 MOBILE_APP_PATH = os.path.join(os.path.dirname(__file__), "..", "App.js")
 
 class MobileAppTestSuite(unittest.TestCase):

@@ -606,8 +606,8 @@ export default function App() {
     })
   ).current;
 
-  // Settings & Network State (Auto-configured to current local laptop IP)
-  const [serverUrl, setServerUrl] = useState('http://10.152.23.38:8000');
+  // Settings & Network State (Defaulted to live Render Cloud Backend)
+  const [serverUrl, setServerUrl] = useState('https://solarscan-backend-ikwb.onrender.com');
   const [serverConnected, setServerConnected] = useState(true);
   const [checkingServer, setCheckingServer] = useState(false);
 
@@ -650,7 +650,7 @@ export default function App() {
   const syncBackendData = async () => {
     try {
       const controller = new SafeAbortController();
-      const timeout = setTimeout(() => controller.abort(), 2500);
+      const timeout = setTimeout(() => controller.abort(), 10000);
       const res = await fetch(`${serverUrl}/api/health`, { signal: controller.signal });
       clearTimeout(timeout);
       if (res.ok) {
@@ -701,7 +701,7 @@ export default function App() {
     setCheckingServer(true);
     try {
       const controller = new SafeAbortController();
-      const timeout = setTimeout(() => controller.abort(), 3500);
+      const timeout = setTimeout(() => controller.abort(), 10000);
       const res = await fetch(`${serverUrl}/api/health`, { signal: controller.signal });
       clearTimeout(timeout);
       setServerConnected(true);
@@ -709,7 +709,7 @@ export default function App() {
       Alert.alert("Server Online", `Connected to SolarScan AI Backend at ${serverUrl}`);
     } catch (_) {
       setServerConnected(false);
-      Alert.alert("Server Offline", "Could not reach laptop backend. App running in Offline Edge AI Mode.");
+      Alert.alert("Server Offline", "Could not reach backend. App running in Offline Edge AI Mode.");
     } finally {
       setCheckingServer(false);
     }
@@ -857,7 +857,7 @@ export default function App() {
           body: formData
         });
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Backend timeout')), 3500)
+          setTimeout(() => reject(new Error('Backend timeout')), 15000)
         );
 
         const res = await Promise.race([fetchPromise, timeoutPromise]);
@@ -2773,12 +2773,12 @@ export default function App() {
                 <Text style={[styles.sectionHeaderSub, { color: theme.textMuted }]}>Configure edge server connection & active credentials</Text>
 
                 <View style={[styles.settingsBox, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Laptop Backend Server URL:</Text>
+                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>SolarScan AI Backend Server URL:</Text>
                   <TextInput
                     style={[styles.urlInput, { backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.surfaceAlt }]}
                     value={serverUrl}
                     onChangeText={setServerUrl}
-                    placeholder="http://10.142.186.38:8000"
+                    placeholder="https://solarscan-backend-ikwb.onrender.com"
                     placeholderTextColor={theme.textMuted}
                     autoCapitalize="none"
                     autoCorrect={false}
