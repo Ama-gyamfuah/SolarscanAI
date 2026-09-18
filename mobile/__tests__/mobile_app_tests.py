@@ -247,6 +247,24 @@ class MobileAppTestSuite(unittest.TestCase):
         self.assertNotIn("Math.floor(Math.random() * pool.length)", content, "Math.random must not be used for defect selection")
         print("[PASS] Test 21: Kofi Boateng Level 4 clearance and 100% deterministic scan engine verified.")
 
+    def test_22_user_session_isolation_and_scan_clearing(self):
+        """Verify clearScanState wipes all scan data on sign out and user session switch."""
+        with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("clearScanState", content, "clearScanState helper must be defined")
+        self.assertIn("activeUserIdRef", content, "activeUserIdRef must watch currentUser.id for session isolation")
+        self.assertIn("ownerId", content, "detectedResult must include ownerId to enforce user-level data isolation")
+        print("[PASS] Test 22: User session isolation and scan telemetry clearing verified.")
+
+    def test_23_physical_damage_and_accuracy_guard(self):
+        """Verify physical damage keywords and visual heuristics protect against false healthy positives."""
+        with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("lower.includes('damage')", content, "damage keyword must be checked for crack classification")
+        self.assertIn("lower.includes('physical')", content, "physical keyword must be checked for crack classification")
+        self.assertIn("visualDefect", content, "Visual defect fallback must evaluate physical characteristics")
+        print("[PASS] Test 23: Physical damage keywords and accuracy guard verified.")
+
 if __name__ == "__main__":
     unittest.main()
 

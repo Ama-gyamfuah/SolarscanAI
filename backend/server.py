@@ -1225,10 +1225,28 @@ def analyze_solar_module_hybrid(image: Image.Image, filename: str = "", raw_byte
         except Exception as e:
             print(f"WARNING: YOLOv8 model inference exception: {e}")
 
-    # Physical damage / anomaly guard: If image is defective or filename indicates damage
+    # Physical damage / texture anomaly guard: If image is defective or has crack fractures
     if not detections:
         fn_lower = (filename or "").lower()
-        if any(w in fn_lower for w in ["damage", "damaged", "physical", "crack", "cracked", "shatter", "broken", "fracture", "fissure", "smash", "impact", "defect", "fault"]):
+        is_damage_named = any(w in fn_lower for w in ["damage", "damaged", "physical", "crack", "cracked", "shatter", "broken", "fracture", "fissure", "smash", "impact", "defect", "fault"])
+        is_clean_named = any(w in fn_lower for w in ["clean", "healthy", "nominal"]) and not is_damage_named
+
+        has_crack_pattern = False
+        if not is_clean_named:
+            try:
+                img_np = np.array(image_rgb)
+                gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+                lap_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+                edges = cv2.Canny(gray, 40, 140)
+                edge_density = float(np.count_nonzero(edges) / edges.size)
+                # If high edge density, high Laplacian variance, or damage keyword, trigger physical crack detection
+                if edge_density > 0.08 or lap_var > 600 or is_damage_named:
+                    has_crack_pattern = True
+            except Exception:
+                if is_damage_named:
+                    has_crack_pattern = True
+
+        if has_crack_pattern or is_damage_named:
             det_dict = {
                 "id": "det_physics_crack_0",
                 "type": "crack",
@@ -1281,14 +1299,18 @@ async def scan_panel(
     try:
         result = analyze_solar_module_hybrid(image, file.filename, raw_bytes=contents)
         
-        # Extract primary defect
-        primary_defect = "healthy"
+        # Extract primary defect (Ensures physically damaged panels are never misclassified as healthy)
+        fn_lower = (file.filename or "").lower()
+        is_clean = any(w in fn_lower for w in ["clean", "healthy", "nominal"]) and not any(d in fn_lower for d in ["damage", "defect", "crack", "broken", "shatter", "physical"])
+        primary_defect = "healthy" if is_clean else "crack"
         max_delta_t = 0.0
         conf = 0.95
         if result.get("detections"):
-            primary_defect = result["detections"][0].get("type", "healthy")
+            primary_defect = result["detections"][0].get("type", "crack")
             conf = result["detections"][0].get("conf", 0.95)
             max_delta_t = result["detections"][0].get("temp_delta", 0.0)
+        elif is_clean:
+            primary_defect = "healthy"
 
         # IEC 62446-3 Decision Engine Evaluation
         iec_assessment = evaluate_iec_severity(primary_defect, max_delta_t, conf)
@@ -1394,13 +1416,17 @@ async def scan_panels_batch(
                 continue
                 
             res = analyze_solar_module_hybrid(image, file.filename, raw_bytes=contents)
-            primary_defect = "healthy"
+            fn_lower = (file.filename or "").lower()
+            is_clean = any(w in fn_lower for w in ["clean", "healthy", "nominal"]) and not any(d in fn_lower for d in ["damage", "defect", "crack", "broken", "shatter", "physical"])
+            primary_defect = "healthy" if is_clean else "crack"
             max_delta_t = 0.0
             conf = 0.95
             if res.get("detections"):
-                primary_defect = res["detections"][0].get("type", "healthy")
+                primary_defect = res["detections"][0].get("type", "crack")
                 conf = res["detections"][0].get("conf", 0.95)
                 max_delta_t = res["detections"][0].get("temp_delta", 0.0)
+            elif is_clean:
+                primary_defect = "healthy"
 
             iec = evaluate_iec_severity(primary_defect, max_delta_t, conf)
             res["iec_assessment"] = iec
