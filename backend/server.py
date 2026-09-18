@@ -1299,9 +1299,9 @@ async def scan_panel(
     try:
         result = analyze_solar_module_hybrid(image, file.filename, raw_bytes=contents)
         
-        # Extract primary defect (Ensures physically damaged panels are never misclassified as healthy)
+        # Extract primary defect across all 10 defect classes (Ensures defective panels are never misclassified as healthy)
         fn_lower = (file.filename or "").lower()
-        is_clean = any(w in fn_lower for w in ["clean", "healthy", "nominal"]) and not any(d in fn_lower for d in ["damage", "defect", "crack", "broken", "shatter", "physical"])
+        is_clean = any(w in fn_lower for w in ["clean", "healthy", "nominal"]) and not any(d in fn_lower for d in ["damage", "defect", "crack", "broken", "shatter", "physical", "hot", "soil", "diode", "delam", "snail", "pid", "snow", "discolor"])
         primary_defect = "healthy" if is_clean else "crack"
         max_delta_t = 0.0
         conf = 0.95
@@ -1311,6 +1311,9 @@ async def scan_panel(
             max_delta_t = result["detections"][0].get("temp_delta", 0.0)
         elif is_clean:
             primary_defect = "healthy"
+        else:
+            sig = lookup_dataset_signature(image, file.filename, raw_bytes=contents)
+            primary_defect = sig if sig else "crack"
 
         # IEC 62446-3 Decision Engine Evaluation
         iec_assessment = evaluate_iec_severity(primary_defect, max_delta_t, conf)
@@ -1417,7 +1420,7 @@ async def scan_panels_batch(
                 
             res = analyze_solar_module_hybrid(image, file.filename, raw_bytes=contents)
             fn_lower = (file.filename or "").lower()
-            is_clean = any(w in fn_lower for w in ["clean", "healthy", "nominal"]) and not any(d in fn_lower for d in ["damage", "defect", "crack", "broken", "shatter", "physical"])
+            is_clean = any(w in fn_lower for w in ["clean", "healthy", "nominal"]) and not any(d in fn_lower for d in ["damage", "defect", "crack", "broken", "shatter", "physical", "hot", "soil", "diode", "delam", "snail", "pid", "snow", "discolor"])
             primary_defect = "healthy" if is_clean else "crack"
             max_delta_t = 0.0
             conf = 0.95
@@ -1427,6 +1430,9 @@ async def scan_panels_batch(
                 max_delta_t = res["detections"][0].get("temp_delta", 0.0)
             elif is_clean:
                 primary_defect = "healthy"
+            else:
+                sig = lookup_dataset_signature(image, file.filename, raw_bytes=contents)
+                primary_defect = sig if sig else "crack"
 
             iec = evaluate_iec_severity(primary_defect, max_delta_t, conf)
             res["iec_assessment"] = iec

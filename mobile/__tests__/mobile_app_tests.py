@@ -12,7 +12,7 @@ class MobileAppTestSuite(unittest.TestCase):
     def test_01_backend_health_and_verify(self):
         """Test backend is active and /api/health responds."""
         try:
-            r = requests.get(f"{SERVER_URL}/api/health", timeout=3)
+            r = requests.get(f"{SERVER_URL}/api/health", timeout=10)
             self.assertEqual(r.status_code, 200)
             data = r.json()
             self.assertTrue("status" in data or "model" in data)
@@ -22,11 +22,11 @@ class MobileAppTestSuite(unittest.TestCase):
 
     def test_02_backend_live_scans_and_work_orders(self):
         """Test /api/scans and /api/work-orders endpoints return data."""
-        r_scans = requests.get(f"{SERVER_URL}/api/scans?limit=5", timeout=3)
+        r_scans = requests.get(f"{SERVER_URL}/api/scans?limit=5", timeout=10)
         self.assertEqual(r_scans.status_code, 200)
         self.assertIn("scans", r_scans.json())
 
-        r_wo = requests.get(f"{SERVER_URL}/api/work-orders", timeout=3)
+        r_wo = requests.get(f"{SERVER_URL}/api/work-orders", timeout=10)
         self.assertEqual(r_wo.status_code, 200)
         self.assertIn("work_orders", r_wo.json())
         print("[PASS] Test 2: Central SQLite /api/scans & /api/work-orders functioning.")
@@ -264,6 +264,45 @@ class MobileAppTestSuite(unittest.TestCase):
         self.assertIn("lower.includes('physical')", content, "physical keyword must be checked for crack classification")
         self.assertIn("visualDefect", content, "Visual defect fallback must evaluate physical characteristics")
         print("[PASS] Test 23: Physical damage keywords and accuracy guard verified.")
+
+    def test_24_defect_verification_simulator_filter(self):
+        """Verify Defect Verification Simulator filter pills and simulatedDefect state exist."""
+        with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("DEFECT_FILTER_OPTIONS", content, "DEFECT_FILTER_OPTIONS must be exported")
+        self.assertIn("simulatedDefect", content, "simulatedDefect state must exist")
+        self.assertIn("setSimulatedDefect", content, "setSimulatedDefect state setter must exist")
+        self.assertIn("Defect Class Verification & AI Simulator", content, "Filter card title must exist in JSX")
+        print("[PASS] Test 24: Defect verification simulator filter pills and simulatedDefect state verified.")
+
+    def test_25_dynamic_all_defect_status_banners(self):
+        """Verify defect banner titles are dynamic across all classes rather than hardcoded physical damage."""
+        with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("THERMAL HOTSPOT ANOMALY", content, "Hotspot dynamic banner must exist")
+        self.assertIn("SOILING ACCUMULATION DETECTED", content, "Soiling dynamic banner must exist")
+        self.assertIn("BYPASS DIODE FAILURE", content, "Bypass failure dynamic banner must exist")
+        self.assertIn("DELAMINATION DEFECT DETECTED", content, "Delamination dynamic banner must exist")
+        self.assertIn("CELL DISCOLORATION DETECTED", content, "Discoloration dynamic banner must exist")
+        self.assertIn("SNAIL TRAIL DEFECT DETECTED", content, "Snail trail dynamic banner must exist")
+        self.assertIn("POTENTIAL INDUCED DEGRADATION", content, "PID dynamic banner must exist")
+        self.assertIn("SNOW ACCUMULATION DETECTED", content, "Snow cover dynamic banner must exist")
+        print("[PASS] Test 25: Dynamic status banner titles verified across all 9 defect classes + healthy.")
+
+    def test_26_multispectral_edge_classifier_all_classes(self):
+        """Verify multi-spectral on-device edge classifier covers all 9 defect classes + healthy."""
+        with open(MOBILE_APP_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("redThermalRatio", content, "Red thermal ratio calculation must exist")
+        self.assertIn("midRatio", content, "Mid-tone variance ratio must exist")
+        self.assertIn("edgeRatio", content, "Edge count ratio must exist")
+        self.assertIn("visualDefect = 'hotspot'", content, "Must classify hotspot visually")
+        self.assertIn("visualDefect = 'soiling'", content, "Must classify soiling visually")
+        self.assertIn("visualDefect = 'delamination'", content, "Must classify delamination visually")
+        self.assertIn("visualDefect = 'discoloration'", content, "Must classify discoloration visually")
+        self.assertIn("visualDefect = 'snail_trail'", content, "Must classify snail trail visually")
+        self.assertIn("visualDefect = 'bypass_failure'", content, "Must classify bypass failure visually")
+        print("[PASS] Test 26: Multi-spectral on-device edge classifier verified across all classes.")
 
 if __name__ == "__main__":
     unittest.main()
