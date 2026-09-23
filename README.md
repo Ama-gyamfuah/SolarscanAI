@@ -11,7 +11,7 @@
 
 ---
 
-> ### 🎓 Final Year Engineering Project Submission & Enterprise Demonstration Guide
+> ### 🎓 Final Year Engineering Project — Source Code Repository & Live Demonstration
 > **Institution:** University of Energy and Natural Resources (UENR), Sunyani, Ghana  
 > **School:** School of Engineering  
 > **Department:** Department of Computer Science & Informatics / Department of IT & Decision Sciences  
@@ -39,8 +39,8 @@
    - [Method 2: One-Click Desktop Batch Launcher](#method-2-one-click-desktop-launcher-windows)
    - [Method 3: Step-by-Step Developer Launch (Web + Backend + Mobile)](#method-3-step-by-step-developer-launch)
 8. [Automated Test Suite & Verification (26/26 Tests Passing)](#-automated-test-suite--verification)
-9. [Repository File Map & Code Organization](#-repository-file-map--code-organization)
-10. [Academic Thesis & Documentation Index](#-academic-thesis--documentation-index)
+9. [Repository Source Code File Map](#-repository-source-code-file-map)
+10. [License & Intellectual Property](#-license--intellectual-property)
 
 ---
 
@@ -310,7 +310,7 @@ OK (26/26 Tests Passing)
 
 ---
 
-## 📂 Repository File Map & Code Organization
+## 📂 Repository Source Code File Map
 
 ```
 SolarscanAI/
@@ -347,29 +347,11 @@ SolarscanAI/
 │   └── __tests__/
 │       └── mobile_app_tests.py           # 26-test automated verification suite
 │
-├── documents/                            # ACADEMIC THESIS & SYSTEM DOCUMENTATION
-│   ├── SolarScanAI_Supervisor_Thesis_Documentation.docx    # Definitive supervisor thesis document
-│   ├── Solar Scan Final Year Project Documentation.docx    # Complete 20MB technical thesis documentation
-│   ├── SolarScanAI_Comprehensive_System_Documentation.md   # Complete system architecture in markdown
-│   ├── diagrams/                         # High-resolution architectural & UML diagrams
-│   │   ├── fig3_1_spiral_model.png       # Spiral SDLC engineering methodology
-│   │   ├── fig3_2_system_architecture.png# Multi-tier hardware/software architecture
-│   │   ├── fig3_3_use_case_diagram.png   # RBAC actor use-case diagram
-│   │   ├── fig3_4_erd_diagram.png        # Entity Relationship Diagram (ERD)
-│   │   ├── fig3_5_system_flowchart.png   # Diagnostic inference pipeline flowchart
-│   │   ├── fig3_6_database_schema.png    # Relational database schema layout
-│   │   └── build_qr_v3_5.png             # Standalone Android APK download QR code
-│   ├── defects/                          # Visual samples across all defect classes
-│   └── screenshots/                      # Verification screenshots across all user roles
-│
-├── scripts/                              # THESIS GENERATION & AUTOMATION UTILITIES
-│   ├── final_thesis_standard_build.py    # Automated thesis document compiler
-│   ├── humanize_thesis.py                # Academic voice refinement & formatting tool
-│   ├── generate_ui_screenshots.py        # Automated headless UI capture utility
-│   └── add_hyperlinks_to_references.py   # APA 7th edition bibliography hyperlink injector
-│
-├── public/                               # STATIC ASSETS
-│   └── build_qr_v3_5.png                 # Standalone APK download QR code
+├── public/                               # STATIC WEB ASSETS
+│   ├── build_qr_v3_5.png                 # Standalone APK download QR code
+│   ├── manifest.json                     # Progressive Web App (PWA) manifest
+│   ├── sw.js                             # Offline Service Worker cache
+│   └── sample_*.png                      # Test diagnostic benchmark images
 │
 ├── Start_SolarScan_AI.bat                # 1-Click Windows desktop system launcher
 ├── solar_defect_yolov8_training.ipynb    # Jupyter training notebook for YOLOv8 model
@@ -378,19 +360,6 @@ SolarscanAI/
 ├── vite.config.js                        # Vite bundler configuration
 └── package.json                          # Root Node.js dependencies & scripts
 ```
-
----
-
-## 📚 Academic Thesis & Documentation Index
-
-All primary research deliverables, thesis chapters, and technical figures are committed directly to this repository under the [`documents/`](documents/) directory:
-
-- 📄 **Supervisor Comprehensive Thesis (.docx):** [`documents/SolarScanAI_Supervisor_Thesis_Documentation.docx`](documents/SolarScanAI_Supervisor_Thesis_Documentation.docx)
-- 📄 **Final Year Project Technical Documentation (.docx):** [`documents/Solar Scan Final Year Project Documentation.docx`](documents/Solar%20Scan%20Final%20Year%20Project%20Documentation.docx)
-- 📖 **Comprehensive Markdown System Manual:** [`documents/SolarScanAI_Comprehensive_System_Documentation.md`](documents/SolarScanAI_Comprehensive_System_Documentation.md)
-- 📊 **Architecture Diagrams Directory:** [`documents/diagrams/`](documents/diagrams/)
-- 🔬 **Defect Class Visual Catalog:** [`documents/defects/`](documents/defects/)
-- 📸 **Interface Screenshots & RBAC Evidence:** [`documents/screenshots/`](documents/screenshots/)
 
 ---
 
